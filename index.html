@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Roundup Games — Brophy Prep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <a href="index.html" class="masthead__logo">
+    <img src="logo.png" alt="The Roundup — Brophy College Preparatory">
+  </a>
+  <p class="masthead__tag">Games &amp; Puzzles</p>
+  <p class="masthead__editor">Edited by Carter Kasarjian &bull; New Games Every School Day</p>
+</header>
+
+<nav class="dateline">
+  <div class="dateline__inner">
+    <span class="dateline__edition" id="editionLabel">No. — · —</span>
+    <div class="dateline__nav">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="mini-crossword.html">Mini Crossword</a>
+      <a href="weekly-crossword.html">Weekly Crossword</a>
+      <a href="guess-the-teacher.html">Guess the Teacher</a>
+      <a href="archive.html">Archive</a>
+      <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Roundup Home ↗</a>
+    </div>
+  </div>
+</nav>
+
+<main class="shell">
+  <div class="hero">
+    <p class="hero__eyebrow">Brophy Roundup Games</p>
+    <h1>Today's puzzles</h1>
+    <p>Games and puzzles from the Roundup, new all school year long. Play today's lineup below, or dig through the archive for past editions.</p>
+  </div>
+
+  <div class="games" id="gameCards"></div>
+</main>
+
+<footer>
+  <div class="footer__inner">
+    <p>&copy; <span id="year"></span> The Roundup · Brophy College Preparatory &bull; Contact me at <a href="mailto:ckasarjian30@brophybroncos.org">ckasarjian30@brophybroncos.org</a> &bull; Version <span id="siteVersion"></span></p>
+    <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Read the Roundup ↗</a>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script>
+  renderGameCards();
+</script>
+</body>
+</html>

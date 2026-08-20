@@ -104,6 +104,23 @@ const SITE_VERSION = "1.0";
 */
 
 const DAILY_PUZZLES = [
+    {
+    isoDate: "2026-08-21",
+    date: "August 21, 2026",
+    crossword: {
+      difficulty: "3/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug21&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "2/5",
+      answer: "Sr. Leyba",
+      clues: [
+        "This teacher is of Native American ancestry.",
+        "This teacher teaches a language class.",
+        "He teaches in Keating."
+      ]
+    }
+  },
   {
     isoDate: "2026-08-20",
     date: "August 20, 2026",

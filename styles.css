@@ -708,35 +708,6 @@ a{ color:inherit; }
   line-height:1.5;
 }
 
-/* "Add a past win" recount control, tucked under each stats row */
-.stats-recount{ margin-top:0.6rem; }
-.stats-recount summary{
-  cursor:pointer;
-  font-family:var(--font-mono);
-  font-size:0.68rem;
-  letter-spacing:0.08em;
-  text-transform:uppercase;
-  color:var(--gold-dim);
-}
-.stats-recount summary:hover{ color:var(--maroon-800); }
-.stats-recount__form{
-  display:flex;
-  gap:0.6rem;
-  flex-wrap:wrap;
-  align-items:center;
-  margin-top:0.7rem;
-}
-.stats-recount__form select{
-  padding:0.5rem 0.7rem;
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  background:#fff;
-  font-family:var(--font-body);
-  font-size:0.88rem;
-  color:var(--ink);
-  max-width:100%;
-}
-
 /* ============================================================
    FOOTER
    ============================================================ */

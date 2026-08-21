@@ -71,7 +71,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.2.1";
+const SITE_VERSION = "1.2.2";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -462,6 +462,7 @@ function renderCrossword(mountId, dateId, data, dateLabel){
   const wrap = document.getElementById(mountId);
   if (!wrap) return;
   if (data.isoDate) wrap.dataset.statsWinId = data.isoDate;
+  wrap.dataset.statsStreakEligible = "true"; // this always renders the CURRENT edition, never archive
   if (!data.crossword || !data.crossword.embedUrl || data.crossword.embedUrl.includes("REPLACE")) {
     wrap.innerHTML = `<div class="crossword-fallback">No crossword embed URL has been set for this edition yet.</div>`;
     return;
@@ -509,7 +510,8 @@ function initPuzzleCompletionListener(){
         const wrap = iframe.closest(".crossword-frame-wrap");
         const category = wrap && wrap.dataset.statsCategory;
         const winId = wrap && wrap.dataset.statsWinId;
-        if (category && winId) recordWin(category, winId);
+        const streakEligible = !!(wrap && wrap.dataset.statsStreakEligible === "true");
+        if (category && winId) recordWin(category, winId, streakEligible);
       }
     });
   });
@@ -599,12 +601,20 @@ function escapeHtml(str){
    browser in localStorage. Each category stores an array of unique
    win ids — that puzzle's isoDate (startIsoDate for Special Edition)
    — rather than a plain counter, so recording the same win twice
-   (an embed re-firing its completion message, or backfilling below)
-   never double counts, and so streaks (see computeStreak) can check
-   "was this specific day won" directly.
+   (an embed re-firing its completion message, or the backfill below)
+   never double counts.
 
-   `streak` marks which categories get a streak — daily/weekly games
-   only, not Special Edition (it's a one-off, not a recurring
+   Win count and streak are tracked separately, because a win from
+   the archive shouldn't retroactively patch a broken streak — you
+   can't go back and un-miss a day. `stats[category]` holds every
+   win (used for the total count); `stats.streakWins[category]` only
+   holds wins that happened while that puzzle was still the current
+   one (used for computeStreak). recordWin's `streakEligible` flag
+   decides which puzzles count as "still current" when they were won
+   — see initPuzzleCompletionListener and mountTeacherGame's callers.
+
+   `streak` marks which categories get a streak at all — daily/weekly
+   games only, not Special Edition (it's a one-off, not a recurring
    schedule, so "consecutive" doesn't mean anything for it). */
 const STATS_STORAGE_KEY = "roundup:stats";
 const STAT_GAMES = [
@@ -616,29 +626,40 @@ const STAT_GAMES = [
 
 function loadStats(){
   const raw = loadGameState(STATS_STORAGE_KEY);
-  const stats = {};
+  const stats = { streakWins: {} };
   STAT_GAMES.forEach(game => {
     stats[game.id] = (raw && Array.isArray(raw[game.id])) ? raw[game.id] : [];
+    if (game.streak) {
+      stats.streakWins[game.id] = (raw && raw.streakWins && Array.isArray(raw.streakWins[game.id])) ? raw.streakWins[game.id] : [];
+    }
   });
   return stats;
 }
 
-function recordWin(category, winId){
+function recordWin(category, winId, streakEligible){
   if (!winId || !STAT_GAMES.some(game => game.id === category)) return;
   const stats = loadStats();
+  let changed = false;
+
   if (!stats[category].includes(winId)) {
     stats[category].push(winId);
-    saveGameState(STATS_STORAGE_KEY, stats);
+    changed = true;
   }
+  if (streakEligible && stats.streakWins[category] && !stats.streakWins[category].includes(winId)) {
+    stats.streakWins[category].push(winId);
+    changed = true;
+  }
+
+  if (changed) saveGameState(STATS_STORAGE_KEY, stats);
 }
 
 function getWinCount(category){
   return loadStats()[category].length;
 }
 
-/* the published-puzzle list a category's streak/backfill is checked
-   against, each as { isoDate, label } and already limited to
-   puzzles whose date has actually arrived (no crediting the future) */
+/* the published-puzzle list a category's streak is checked against,
+   each as { isoDate, label } and already limited to puzzles whose
+   date has actually arrived (no crediting the future) */
 function getPublishedEntries(category){
   const todayIso = getTodayIsoDate();
   if (category === "weeklyCrossword") {
@@ -670,7 +691,7 @@ function computeStreak(category){
   const game = STAT_GAMES.find(g => g.id === category);
   if (!game || !game.streak) return null;
 
-  const wins = loadStats()[category];
+  const wins = loadStats().streakWins[category];
   const entries = getPublishedEntries(category);
 
   let i = entries.length - 1;
@@ -684,22 +705,26 @@ function computeStreak(category){
   return streak;
 }
 
-/* ---------- recounting wins from before this feature existed ----------
-   Two different situations here:
+/* ---------- recovering wins recorded before this feature existed ----------
+   Guess the Teacher already stored win/lose state per puzzle in
+   localStorage long before stats existed (see mountTeacherGame), so
+   any past win is still sitting there and can be recovered
+   automatically — no self-reporting involved. This runs once on
+   every page load; it's cheap and recordWin's de-dup makes it safe
+   to repeat.
 
-   1. Guess the Teacher already stored win/lose state per puzzle in
-      localStorage long before stats existed (see mountTeacherGame),
-      so any past win is still sitting there and can be recovered
-      automatically — no guessing involved. This runs once on every
-      page load; it's cheap and recordWin's de-dup makes it safe to
-      repeat.
-   2. Crossword-type embeds (Mini/Weekly/Special) only tell us about
-      a completion at the moment it happens via postMessage — there's
-      no record of a solve that happened before this feature shipped,
-      and no documented way to ask AmuseLabs "was this already solved
-      previously." So for those, recounting is a manual, honest
-      self-report (see renderStatsPage's "add a past win" control)
-      rather than something we can detect automatically. */
+   (Crossword-type embeds — Mini/Weekly/Special — have no equivalent:
+   they only tell us about a completion at the moment it happens via
+   postMessage, with no record of a solve from before this feature
+   shipped, and no documented way to ask AmuseLabs "was this already
+   solved previously." There's deliberately no self-report option for
+   those — see the conversation that removed it.)
+
+   Eligibility for streaks follows the same today-vs-archive rule as
+   live completions: a "today::" key means it was won while it was
+   still the current puzzle, so it counts toward the streak; an
+   "archive::" key means it was won after the fact, so it only counts
+   toward the total. */
 function backfillGuessTheTeacherWins(){
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -710,14 +735,16 @@ function backfillGuessTheTeacherWins(){
 
       const suffix = key.slice("roundup:teacher:".length);
       let isoDate = null;
+      let streakEligible = false;
       if (suffix.indexOf("archive::") === 0) {
         isoDate = suffix.slice("archive::".length);
       } else if (suffix.indexOf("today::") === 0) {
         const dateLabel = suffix.slice("today::".length);
         const match = DAILY_PUZZLES.find(entry => entry.date === dateLabel);
         if (match) isoDate = match.isoDate;
+        streakEligible = true;
       }
-      if (isoDate) recordWin("guessTheTeacher", isoDate);
+      if (isoDate) recordWin("guessTheTeacher", isoDate, streakEligible);
     }
   } catch (e) {
     // localStorage unavailable — nothing to backfill
@@ -769,8 +796,12 @@ backfillGuessTheTeacherWins();
    should be that same puzzle's isoDate — kept separate from
    storageKey since it's what stats/streaks are recorded against,
    and needs to stay stable and isoDate-shaped regardless of how
-   storageKey is formatted. */
-function mountTeacherGame(container, data, storageKey, winId){
+   storageKey is formatted. `streakEligible` should be true only when
+   this is today's puzzle (not an archived one) — winning it counts
+   toward the total either way, but only a same-day win extends the
+   streak; going back and solving an old one can't retroactively fix
+   a day you missed. */
+function mountTeacherGame(container, data, storageKey, winId, streakEligible){
   if (!data.guessTheTeacher || !data.guessTheTeacher.answer) {
     container.innerHTML = `<div class="crossword-fallback">No Guess the Teacher puzzle has been set for this edition yet.</div>`;
     return;
@@ -842,7 +873,7 @@ function mountTeacherGame(container, data, storageKey, winId){
       resultEl.textContent = state.won
         ? `Correct — it's ${answer}.`
         : `Out of guesses. The answer was ${answer}.`;
-      if (state.won && winId) recordWin("guessTheTeacher", winId);
+      if (state.won && winId) recordWin("guessTheTeacher", winId, streakEligible);
     }
   }
 
@@ -974,7 +1005,7 @@ function renderMiniCrosswordArchiveDetail(entry, detailEl){
     wrap.innerHTML = `<iframe src="${entry.crossword.embedUrl}" title="Mini Crossword — ${entry.date}" loading="lazy"></iframe>`;
   }
 
-  mountTeacherGame(document.getElementById("archiveTeacherMount"), entry, `archive::${entry.isoDate}`, entry.isoDate);
+  mountTeacherGame(document.getElementById("archiveTeacherMount"), entry, `archive::${entry.isoDate}`, entry.isoDate, false);
 }
 
 function renderWeeklyCrosswordArchiveDetail(entry, detailEl){
@@ -1042,10 +1073,6 @@ function renderStatsPage(){
   listEl.innerHTML = STAT_GAMES.map(game => {
     const count = getWinCount(game.id);
     const streak = computeStreak(game.id);
-    const wins = loadStats()[game.id];
-    const options = getPublishedEntries(game.id).map(entry =>
-      `<option value="${entry.isoDate}">${wins.includes(entry.isoDate) ? "✓ " : ""}${escapeHtml(entry.label)}</option>`
-    ).join("");
 
     return `
       <li class="stats-row">
@@ -1053,30 +1080,9 @@ function renderStatsPage(){
           <span class="stats-row__label">${game.label}</span>
           <span class="stats-row__count">${count} win${count === 1 ? "" : "s"}${streak !== null ? ` · ${streak} ${game.streakUnit}${streak === 1 ? "" : "s"} streak` : ""}</span>
         </div>
-        <details class="stats-recount">
-          <summary>Add a past win</summary>
-          <div class="stats-recount__form">
-            <select data-recount-select="${game.id}">
-              <option value="">Choose an edition…</option>
-              ${options}
-            </select>
-            <button class="btn btn--ghost" type="button" data-recount-btn="${game.id}">Mark as won</button>
-          </div>
-        </details>
       </li>
     `;
   }).join("");
-
-  listEl.querySelectorAll("[data-recount-btn]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const category = btn.dataset.recountBtn;
-      const select = listEl.querySelector(`[data-recount-select="${category}"]`);
-      if (select && select.value) {
-        recordWin(category, select.value);
-        renderStatsPage();
-      }
-    });
-  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {

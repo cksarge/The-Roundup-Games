@@ -71,7 +71,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.2";
+const SITE_VERSION = "1.2.1";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -461,6 +461,7 @@ function renderCrossword(mountId, dateId, data, dateLabel){
   if (dateEl) dateEl.textContent = dateLabel || "";
   const wrap = document.getElementById(mountId);
   if (!wrap) return;
+  if (data.isoDate) wrap.dataset.statsWinId = data.isoDate;
   if (!data.crossword || !data.crossword.embedUrl || data.crossword.embedUrl.includes("REPLACE")) {
     wrap.innerHTML = `<div class="crossword-fallback">No crossword embed URL has been set for this edition yet.</div>`;
     return;
@@ -472,9 +473,10 @@ function renderCrossword(mountId, dateId, data, dateLabel){
    Generic — unlike renderCrossword above, this doesn't assume the
    embed is a crossword, since a Special Edition can be any embed
    type (spelling bee, trivia, etc.) depending on the occasion. */
-function renderSpecialEmbed(mountId, embedUrl, titleLabel){
+function renderSpecialEmbed(mountId, embedUrl, titleLabel, winId){
   const wrap = document.getElementById(mountId);
   if (!wrap) return;
+  if (winId) wrap.dataset.statsWinId = winId;
   if (!embedUrl || embedUrl.includes("REPLACE")) {
     wrap.innerHTML = `<div class="crossword-fallback">No embed URL has been set for this special edition yet.</div>`;
     return;
@@ -487,10 +489,13 @@ function renderSpecialEmbed(mountId, embedUrl, titleLabel){
    message to the parent page via window.postMessage when a puzzle
    is completed. The embed already shows its own "you finished!"
    screen, so we don't display anything here — we just use this to
-   record a win in stats (see STAT_GAMES / recordWin below), matched
-   to the right game type via each embed wrap's data-stats-category
-   attribute and to the right puzzle via id (present both in the
-   postMessage payload and in that embed's iframe src). */
+   record a win in stats (see STAT_GAMES / recordWin below). The
+   AmuseLabs puzzle id (present both in the message and in that
+   embed's iframe src) is only used to find the right wrap on the
+   page — the win itself is recorded under that wrap's own
+   data-stats-win-id (the site's own isoDate for that puzzle), so
+   wins line up with DAILY_PUZZLES/WEEKLY_PUZZLES/SPECIAL_PUZZLES for
+   streak calculations regardless of AmuseLabs' internal id. */
 const AMUSELABS_ORIGIN = "https://puzzleme.amuselabs.com";
 
 function initPuzzleCompletionListener(){
@@ -503,7 +508,8 @@ function initPuzzleCompletionListener(){
       if (iframe.src.indexOf(data.id) !== -1) {
         const wrap = iframe.closest(".crossword-frame-wrap");
         const category = wrap && wrap.dataset.statsCategory;
-        if (category) recordWin(category, data.id);
+        const winId = wrap && wrap.dataset.statsWinId;
+        if (category && winId) recordWin(category, winId);
       }
     });
   });
@@ -564,7 +570,7 @@ function renderSpecialEditionPage(){
   if (descEl) descEl.textContent = "A special one-off game, live for a limited time — enjoy it while it lasts.";
   if (headingEl) headingEl.textContent = "Play";
   if (dateEl) dateEl.textContent = withDifficulty(SPECIAL_EDITION.date, SPECIAL_EDITION.difficulty);
-  renderSpecialEmbed("specialFrameWrap", SPECIAL_EDITION.embedUrl, `Special Edition — ${SPECIAL_EDITION.theme}`);
+  renderSpecialEmbed("specialFrameWrap", SPECIAL_EDITION.embedUrl, `Special Edition — ${SPECIAL_EDITION.theme}`, SPECIAL_EDITION.startIsoDate);
 }
 
 /* ---------- tiny localStorage helpers (used to remember guesses) ---------- */
@@ -591,16 +597,21 @@ function escapeHtml(str){
 /* ---------- win stats (stats.html) ----------
    Tracks how many times the player has won each game, stored per
    browser in localStorage. Each category stores an array of unique
-   win ids (a puzzle's id, or a Guess the Teacher storageKey) rather
-   than a plain counter, so recording the same win twice (e.g. an
-   embed re-firing its completion message on a reload) never double
-   counts — recordWin is safe to call as often as you like. */
+   win ids — that puzzle's isoDate (startIsoDate for Special Edition)
+   — rather than a plain counter, so recording the same win twice
+   (an embed re-firing its completion message, or backfilling below)
+   never double counts, and so streaks (see computeStreak) can check
+   "was this specific day won" directly.
+
+   `streak` marks which categories get a streak — daily/weekly games
+   only, not Special Edition (it's a one-off, not a recurring
+   schedule, so "consecutive" doesn't mean anything for it). */
 const STATS_STORAGE_KEY = "roundup:stats";
 const STAT_GAMES = [
-  { id: "miniCrossword", label: "Mini Crossword" },
-  { id: "weeklyCrossword", label: "Weekly Crossword" },
-  { id: "guessTheTeacher", label: "Guess the Teacher" },
-  { id: "specialEdition", label: "Special Edition" }
+  { id: "miniCrossword", label: "Mini Crossword", streak: true, streakUnit: "day" },
+  { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week" },
+  { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day" },
+  { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null }
 ];
 
 function loadStats(){
@@ -625,12 +636,141 @@ function getWinCount(category){
   return loadStats()[category].length;
 }
 
+/* the published-puzzle list a category's streak/backfill is checked
+   against, each as { isoDate, label } and already limited to
+   puzzles whose date has actually arrived (no crediting the future) */
+function getPublishedEntries(category){
+  const todayIso = getTodayIsoDate();
+  if (category === "weeklyCrossword") {
+    return [...WEEKLY_PUZZLES]
+      .filter(e => e.isoDate <= todayIso)
+      .sort((a, b) => (a.isoDate < b.isoDate ? -1 : 1))
+      .map(e => ({ isoDate: e.isoDate, label: e.date }));
+  }
+  if (category === "specialEdition") {
+    return [...SPECIAL_PUZZLES]
+      .filter(e => e.startIsoDate <= todayIso)
+      .sort((a, b) => (a.startIsoDate < b.startIsoDate ? -1 : 1))
+      .map(e => ({ isoDate: e.startIsoDate, label: e.date }));
+  }
+  // miniCrossword and guessTheTeacher both run off DAILY_PUZZLES
+  return [...DAILY_PUZZLES]
+    .filter(e => e.isoDate <= todayIso)
+    .sort((a, b) => (a.isoDate < b.isoDate ? -1 : 1))
+    .map(e => ({ isoDate: e.isoDate, label: e.date }));
+}
+
+/* Current streak for a daily/weekly category: consecutive published
+   entries won, counting backward from the most recent one. If the
+   very latest entry (today's day, or this week) hasn't been played
+   yet, it's skipped rather than treated as a break — the streak
+   reflects "every opportunity you've actually had so far," and only
+   really breaks once a day/week passes with nothing recorded for it. */
+function computeStreak(category){
+  const game = STAT_GAMES.find(g => g.id === category);
+  if (!game || !game.streak) return null;
+
+  const wins = loadStats()[category];
+  const entries = getPublishedEntries(category);
+
+  let i = entries.length - 1;
+  if (i >= 0 && !wins.includes(entries[i].isoDate)) i--;
+
+  let streak = 0;
+  while (i >= 0 && wins.includes(entries[i].isoDate)) {
+    streak++;
+    i--;
+  }
+  return streak;
+}
+
+/* ---------- recounting wins from before this feature existed ----------
+   Two different situations here:
+
+   1. Guess the Teacher already stored win/lose state per puzzle in
+      localStorage long before stats existed (see mountTeacherGame),
+      so any past win is still sitting there and can be recovered
+      automatically — no guessing involved. This runs once on every
+      page load; it's cheap and recordWin's de-dup makes it safe to
+      repeat.
+   2. Crossword-type embeds (Mini/Weekly/Special) only tell us about
+      a completion at the moment it happens via postMessage — there's
+      no record of a solve that happened before this feature shipped,
+      and no documented way to ask AmuseLabs "was this already solved
+      previously." So for those, recounting is a manual, honest
+      self-report (see renderStatsPage's "add a past win" control)
+      rather than something we can detect automatically. */
+function backfillGuessTheTeacherWins(){
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || key.indexOf("roundup:teacher:") !== 0) continue;
+      const state = loadGameState(key);
+      if (!state || !state.won) continue;
+
+      const suffix = key.slice("roundup:teacher:".length);
+      let isoDate = null;
+      if (suffix.indexOf("archive::") === 0) {
+        isoDate = suffix.slice("archive::".length);
+      } else if (suffix.indexOf("today::") === 0) {
+        const dateLabel = suffix.slice("today::".length);
+        const match = DAILY_PUZZLES.find(entry => entry.date === dateLabel);
+        if (match) isoDate = match.isoDate;
+      }
+      if (isoDate) recordWin("guessTheTeacher", isoDate);
+    }
+  } catch (e) {
+    // localStorage unavailable — nothing to backfill
+  }
+}
+
+/* one-time cleanup for anyone who had stats recorded under the
+   previous version, where crossword wins were stored keyed by the
+   AmuseLabs puzzle id instead of the site's own isoDate — maps each
+   old id back to its isoDate (by matching it against embedUrls) so
+   existing wins keep counting and can feed streaks going forward. */
+function migrateCrosswordWinIds(){
+  const isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+  const sources = {
+    miniCrossword: DAILY_PUZZLES.map(e => ({ needle: e.crossword && e.crossword.embedUrl, isoDate: e.isoDate })),
+    weeklyCrossword: WEEKLY_PUZZLES.map(e => ({ needle: e.crossword && e.crossword.embedUrl, isoDate: e.isoDate })),
+    specialEdition: SPECIAL_PUZZLES.map(e => ({ needle: e.embedUrl, isoDate: e.startIsoDate }))
+  };
+
+  const stats = loadStats();
+  let changed = false;
+
+  ["miniCrossword", "weeklyCrossword", "specialEdition"].forEach(category => {
+    const migrated = stats[category].map(id => {
+      if (isoPattern.test(id)) return id;
+      const match = sources[category].find(s => s.needle && s.needle.indexOf(id) !== -1);
+      if (match) { changed = true; return match.isoDate; }
+      return id;
+    });
+    stats[category] = [...new Set(migrated)];
+  });
+
+  if (changed) saveGameState(STATS_STORAGE_KEY, stats);
+}
+
+/* Run immediately (not gated behind DOMContentLoaded) — these are
+   pure localStorage operations with no DOM dependency, and need to
+   have already happened before any page-specific inline script
+   (e.g. stats.html's renderStatsPage()) reads stats, since that
+   script runs before DOMContentLoaded fires. */
+migrateCrosswordWinIds();
+backfillGuessTheTeacherWins();
+
 /* ---------- Guess the Teacher widget factory ----------
    `storageKey` should be a short unique string for this specific
    puzzle (e.g. today's date, or an archive entry's date) — it's
    what remembers a player's guesses across a reload, and what
-   makes a *new* puzzle (a new storageKey) start fresh. */
-function mountTeacherGame(container, data, storageKey){
+   makes a *new* puzzle (a new storageKey) start fresh. `winId`
+   should be that same puzzle's isoDate — kept separate from
+   storageKey since it's what stats/streaks are recorded against,
+   and needs to stay stable and isoDate-shaped regardless of how
+   storageKey is formatted. */
+function mountTeacherGame(container, data, storageKey, winId){
   if (!data.guessTheTeacher || !data.guessTheTeacher.answer) {
     container.innerHTML = `<div class="crossword-fallback">No Guess the Teacher puzzle has been set for this edition yet.</div>`;
     return;
@@ -702,7 +842,7 @@ function mountTeacherGame(container, data, storageKey){
       resultEl.textContent = state.won
         ? `Correct — it's ${answer}.`
         : `Out of guesses. The answer was ${answer}.`;
-      if (state.won && stateKey) recordWin("guessTheTeacher", stateKey);
+      if (state.won && winId) recordWin("guessTheTeacher", winId);
     }
   }
 
@@ -735,14 +875,12 @@ function mountTeacherGame(container, data, storageKey){
 }
 
 /* ---------- archive list + inline detail (archive.html only) ----------
-   One generic list/toggle renderer, used twice: once for the Mini
-   Crossword + Guess the Teacher archive, once for the Weekly
-   Crossword archive. Each takes its own list/detail element ids,
-   its own entries array, and a function that knows how to render
-   that entry's detail panel(s). */
-function renderArchiveSection(listElId, detailElId, entries, renderDetail, getRowLabel){
+   One generic list/toggle renderer, used for all three archive
+   sections. Each row's detail panel is its own list item directly
+   below that row (not a single shared panel below the whole list),
+   so "View" expands content right where you clicked it. */
+function renderArchiveSection(listElId, entries, renderDetail, getRowLabel){
   const listEl = document.getElementById(listElId);
-  const detailEl = document.getElementById(detailElId);
   if (!listEl) return;
 
   const sorted = [...entries].sort((a, b) => (a.isoDate < b.isoDate ? 1 : -1));
@@ -759,6 +897,7 @@ function renderArchiveSection(listElId, detailElId, entries, renderDetail, getRo
       </span>
       <button class="btn btn--ghost" type="button" data-index="${i}" aria-expanded="false">View →</button>
     </li>
+    <li class="archive-row-detail" data-detail-index="${i}" hidden></li>
   `).join("");
 
   let openIndex = null;
@@ -766,10 +905,12 @@ function renderArchiveSection(listElId, detailElId, entries, renderDetail, getRo
   listEl.querySelectorAll("[data-index]").forEach(btn => {
     btn.addEventListener("click", () => {
       const index = Number(btn.dataset.index);
+      const detailEl = listEl.querySelector(`[data-detail-index="${index}"]`);
 
       if (openIndex === index) {
         // this entry is already open — collapse it
         detailEl.innerHTML = "";
+        detailEl.hidden = true;
         btn.textContent = "View →";
         btn.setAttribute("aria-expanded", "false");
         openIndex = null;
@@ -777,16 +918,22 @@ function renderArchiveSection(listElId, detailElId, entries, renderDetail, getRo
       }
 
       // switching to a different entry (or opening for the first time) —
-      // reset whichever button was previously showing "Hide"
+      // reset whichever row was previously showing "Hide"
       if (openIndex !== null) {
         const prevBtn = listEl.querySelector(`[data-index="${openIndex}"]`);
+        const prevDetailEl = listEl.querySelector(`[data-detail-index="${openIndex}"]`);
         if (prevBtn) {
           prevBtn.textContent = "View →";
           prevBtn.setAttribute("aria-expanded", "false");
         }
+        if (prevDetailEl) {
+          prevDetailEl.innerHTML = "";
+          prevDetailEl.hidden = true;
+        }
       }
 
       renderDetail(sorted[index], detailEl);
+      detailEl.hidden = false;
       btn.textContent = "Hide";
       btn.setAttribute("aria-expanded", "true");
       openIndex = index;
@@ -808,7 +955,7 @@ function renderMiniCrosswordArchiveDetail(entry, detailEl){
         <span class="panel__date">${withDifficulty(entry.date, entry.crossword && entry.crossword.difficulty)}</span>
       </div>
       <div class="panel__body">
-        <div class="crossword-frame-wrap" id="archiveCrosswordWrap" data-stats-category="miniCrossword"></div>
+        <div class="crossword-frame-wrap" id="archiveCrosswordWrap" data-stats-category="miniCrossword" data-stats-win-id="${entry.isoDate}"></div>
       </div>
     </div>
     <div class="panel">
@@ -827,7 +974,7 @@ function renderMiniCrosswordArchiveDetail(entry, detailEl){
     wrap.innerHTML = `<iframe src="${entry.crossword.embedUrl}" title="Mini Crossword — ${entry.date}" loading="lazy"></iframe>`;
   }
 
-  mountTeacherGame(document.getElementById("archiveTeacherMount"), entry, `archive::${entry.isoDate}`);
+  mountTeacherGame(document.getElementById("archiveTeacherMount"), entry, `archive::${entry.isoDate}`, entry.isoDate);
 }
 
 function renderWeeklyCrosswordArchiveDetail(entry, detailEl){
@@ -838,7 +985,7 @@ function renderWeeklyCrosswordArchiveDetail(entry, detailEl){
         <span class="panel__date">${withDifficulty(entry.date, entry.difficulty)}</span>
       </div>
       <div class="panel__body">
-        <div class="crossword-frame-wrap" id="weeklyArchiveCrosswordWrap" data-stats-category="weeklyCrossword"></div>
+        <div class="crossword-frame-wrap" id="weeklyArchiveCrosswordWrap" data-stats-category="weeklyCrossword" data-stats-win-id="${entry.isoDate}"></div>
       </div>
     </div>
   `;
@@ -853,14 +1000,14 @@ function renderWeeklyCrosswordArchiveDetail(entry, detailEl){
 
 function renderArchive(){
   renderArchiveSection(
-    "archiveList", "archiveDetail", ARCHIVE, renderMiniCrosswordArchiveDetail,
+    "archiveList", ARCHIVE, renderMiniCrosswordArchiveDetail,
     entry => entry.date
   );
 }
 
 function renderWeeklyArchive(){
   renderArchiveSection(
-    "weeklyArchiveList", "weeklyArchiveDetail", WEEKLY_ARCHIVE, renderWeeklyCrosswordArchiveDetail,
+    "weeklyArchiveList", WEEKLY_ARCHIVE, renderWeeklyCrosswordArchiveDetail,
     entry => entry.date
   );
 }
@@ -877,12 +1024,12 @@ function renderSpecialEditionArchiveDetail(entry, detailEl){
       </div>
     </div>
   `;
-  renderSpecialEmbed("specialArchiveWrap", entry.embedUrl, `Special Edition — ${entry.theme}`);
+  renderSpecialEmbed("specialArchiveWrap", entry.embedUrl, `Special Edition — ${entry.theme}`, entry.startIsoDate);
 }
 
 function renderSpecialArchive(){
   renderArchiveSection(
-    "specialArchiveList", "specialArchiveDetail", SPECIAL_ARCHIVE, renderSpecialEditionArchiveDetail,
+    "specialArchiveList", SPECIAL_ARCHIVE, renderSpecialEditionArchiveDetail,
     entry => `${entry.theme} — ${entry.date}`
   );
 }
@@ -891,15 +1038,45 @@ function renderSpecialArchive(){
 function renderStatsPage(){
   const listEl = document.getElementById("statsList");
   if (!listEl) return;
+
   listEl.innerHTML = STAT_GAMES.map(game => {
     const count = getWinCount(game.id);
+    const streak = computeStreak(game.id);
+    const wins = loadStats()[game.id];
+    const options = getPublishedEntries(game.id).map(entry =>
+      `<option value="${entry.isoDate}">${wins.includes(entry.isoDate) ? "✓ " : ""}${escapeHtml(entry.label)}</option>`
+    ).join("");
+
     return `
       <li class="stats-row">
-        <span class="stats-row__label">${game.label}</span>
-        <span class="stats-row__count">${count} win${count === 1 ? "" : "s"}</span>
+        <div class="stats-row__top">
+          <span class="stats-row__label">${game.label}</span>
+          <span class="stats-row__count">${count} win${count === 1 ? "" : "s"}${streak !== null ? ` · ${streak} ${game.streakUnit}${streak === 1 ? "" : "s"} streak` : ""}</span>
+        </div>
+        <details class="stats-recount">
+          <summary>Add a past win</summary>
+          <div class="stats-recount__form">
+            <select data-recount-select="${game.id}">
+              <option value="">Choose an edition…</option>
+              ${options}
+            </select>
+            <button class="btn btn--ghost" type="button" data-recount-btn="${game.id}">Mark as won</button>
+          </div>
+        </details>
       </li>
     `;
   }).join("");
+
+  listEl.querySelectorAll("[data-recount-btn]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const category = btn.dataset.recountBtn;
+      const select = listEl.querySelector(`[data-recount-select="${category}"]`);
+      if (select && select.value) {
+        recordWin(category, select.value);
+        renderStatsPage();
+      }
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {

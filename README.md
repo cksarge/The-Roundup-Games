@@ -56,6 +56,10 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 ### Unreleased
 
 
+### Version 1.2.2 — August 2026
+- Removed the manual "Add a past win" self-report control from the Stats page — there's no way to verify a self-reported win is genuine on a static site with no accounts or server, and the honest answer was that it shouldn't exist. Guess the Teacher's automatic recovery of past wins (from state it already stored locally) stays, since that's real data, not a claim.
+- Win count and streak are now tracked separately: completing an archived edition still adds to your total win count, but no longer extends (or repairs) a streak — only winning an edition while it's still current does that, since a streak can't be patched retroactively.
+
 ### Version 1.2.1 — August 2026
 - Fixed the Archive: clicking "View" now expands that edition's content directly below the row you clicked, instead of always in one shared panel below the entire list.
 - Added win streaks for Mini Crossword, Weekly Crossword, and Guess the Teacher (not Special Edition, since it's a one-off rather than a recurring schedule), shown on the Stats page. A streak counts consecutive published editions won, and doesn't break just because today's/this week's hasn't been played yet — only an actually-missed edition breaks it.

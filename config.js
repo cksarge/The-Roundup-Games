@@ -71,7 +71,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.1.2";
+const SITE_VERSION = "1.2";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -482,6 +482,33 @@ function renderSpecialEmbed(mountId, embedUrl, titleLabel){
   wrap.innerHTML = `<iframe src="${embedUrl}" title="${titleLabel}" loading="lazy"></iframe>`;
 }
 
+/* ---------- crossword embed completion messages ----------
+   AmuseLabs PuzzleMe embeds (crosswords, spelling bees, etc.) post a
+   message to the parent page via window.postMessage when a puzzle
+   is completed. The embed already shows its own "you finished!"
+   screen, so we don't display anything here — we just use this to
+   record a win in stats (see STAT_GAMES / recordWin below), matched
+   to the right game type via each embed wrap's data-stats-category
+   attribute and to the right puzzle via id (present both in the
+   postMessage payload and in that embed's iframe src). */
+const AMUSELABS_ORIGIN = "https://puzzleme.amuselabs.com";
+
+function initPuzzleCompletionListener(){
+  window.addEventListener("message", (event) => {
+    if (event.origin !== AMUSELABS_ORIGIN) return;
+    const data = event.data;
+    if (!data || data.type !== "PUZZLE_COMPLETE" || !data.completedCorrectly || !data.id) return;
+
+    document.querySelectorAll(".crossword-frame-wrap iframe").forEach(iframe => {
+      if (iframe.src.indexOf(data.id) !== -1) {
+        const wrap = iframe.closest(".crossword-frame-wrap");
+        const category = wrap && wrap.dataset.statsCategory;
+        if (category) recordWin(category, data.id);
+      }
+    });
+  });
+}
+
 /* ---------- special edition homepage card (index.html only) ----------
    Live: a large, prominent banner above the regular games grid.
    Not live: a normal card at the very bottom of the grid, still
@@ -561,6 +588,43 @@ function escapeHtml(str){
   return str.replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
+/* ---------- win stats (stats.html) ----------
+   Tracks how many times the player has won each game, stored per
+   browser in localStorage. Each category stores an array of unique
+   win ids (a puzzle's id, or a Guess the Teacher storageKey) rather
+   than a plain counter, so recording the same win twice (e.g. an
+   embed re-firing its completion message on a reload) never double
+   counts — recordWin is safe to call as often as you like. */
+const STATS_STORAGE_KEY = "roundup:stats";
+const STAT_GAMES = [
+  { id: "miniCrossword", label: "Mini Crossword" },
+  { id: "weeklyCrossword", label: "Weekly Crossword" },
+  { id: "guessTheTeacher", label: "Guess the Teacher" },
+  { id: "specialEdition", label: "Special Edition" }
+];
+
+function loadStats(){
+  const raw = loadGameState(STATS_STORAGE_KEY);
+  const stats = {};
+  STAT_GAMES.forEach(game => {
+    stats[game.id] = (raw && Array.isArray(raw[game.id])) ? raw[game.id] : [];
+  });
+  return stats;
+}
+
+function recordWin(category, winId){
+  if (!winId || !STAT_GAMES.some(game => game.id === category)) return;
+  const stats = loadStats();
+  if (!stats[category].includes(winId)) {
+    stats[category].push(winId);
+    saveGameState(STATS_STORAGE_KEY, stats);
+  }
+}
+
+function getWinCount(category){
+  return loadStats()[category].length;
+}
+
 /* ---------- Guess the Teacher widget factory ----------
    `storageKey` should be a short unique string for this specific
    puzzle (e.g. today's date, or an archive entry's date) — it's
@@ -638,6 +702,7 @@ function mountTeacherGame(container, data, storageKey){
       resultEl.textContent = state.won
         ? `Correct — it's ${answer}.`
         : `Out of guesses. The answer was ${answer}.`;
+      if (state.won && stateKey) recordWin("guessTheTeacher", stateKey);
     }
   }
 
@@ -743,7 +808,7 @@ function renderMiniCrosswordArchiveDetail(entry, detailEl){
         <span class="panel__date">${withDifficulty(entry.date, entry.crossword && entry.crossword.difficulty)}</span>
       </div>
       <div class="panel__body">
-        <div class="crossword-frame-wrap" id="archiveCrosswordWrap"></div>
+        <div class="crossword-frame-wrap" id="archiveCrosswordWrap" data-stats-category="miniCrossword"></div>
       </div>
     </div>
     <div class="panel">
@@ -773,7 +838,7 @@ function renderWeeklyCrosswordArchiveDetail(entry, detailEl){
         <span class="panel__date">${withDifficulty(entry.date, entry.difficulty)}</span>
       </div>
       <div class="panel__body">
-        <div class="crossword-frame-wrap" id="weeklyArchiveCrosswordWrap"></div>
+        <div class="crossword-frame-wrap" id="weeklyArchiveCrosswordWrap" data-stats-category="weeklyCrossword"></div>
       </div>
     </div>
   `;
@@ -808,7 +873,7 @@ function renderSpecialEditionArchiveDetail(entry, detailEl){
         <span class="panel__date">${withDifficulty(entry.date, entry.difficulty)}</span>
       </div>
       <div class="panel__body">
-        <div class="crossword-frame-wrap" id="specialArchiveWrap"></div>
+        <div class="crossword-frame-wrap" id="specialArchiveWrap" data-stats-category="specialEdition"></div>
       </div>
     </div>
   `;
@@ -822,8 +887,24 @@ function renderSpecialArchive(){
   );
 }
 
+/* ---------- stats page (stats.html only) ---------- */
+function renderStatsPage(){
+  const listEl = document.getElementById("statsList");
+  if (!listEl) return;
+  listEl.innerHTML = STAT_GAMES.map(game => {
+    const count = getWinCount(game.id);
+    return `
+      <li class="stats-row">
+        <span class="stats-row__label">${game.label}</span>
+        <span class="stats-row__count">${count} win${count === 1 ? "" : "s"}</span>
+      </li>
+    `;
+  }).join("");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("year") && (document.getElementById("year").textContent = new Date().getFullYear());
   document.getElementById("siteVersion") && (document.getElementById("siteVersion").textContent = SITE_VERSION);
   initEditionLabel();
+  initPuzzleCompletionListener();
 });

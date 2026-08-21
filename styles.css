@@ -662,8 +662,11 @@ a{ color:inherit; }
   font-size:0.94rem;
 }
 
-.archive-detail{ margin-top:1.8rem; }
-.archive-detail:empty{ display:none; }
+.archive-row-detail[hidden]{ display:none; }
+.archive-row-detail:not(:empty){
+  padding:1.6rem 0.2rem 2rem;
+  border-bottom:1px solid var(--line);
+}
 
 /* ============================================================
    STATS (stats.html)
@@ -675,12 +678,15 @@ a{ color:inherit; }
   border-top:1px solid var(--line);
 }
 .stats-row{
+  padding:1rem 0.2rem;
+  border-bottom:1px solid var(--line);
+}
+.stats-row__top{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:1rem;
-  padding:1rem 0.2rem;
-  border-bottom:1px solid var(--line);
+  flex-wrap:wrap;
 }
 .stats-row__label{
   font-family:var(--font-body);
@@ -700,6 +706,35 @@ a{ color:inherit; }
   color:var(--ink-soft);
   font-size:0.86rem;
   line-height:1.5;
+}
+
+/* "Add a past win" recount control, tucked under each stats row */
+.stats-recount{ margin-top:0.6rem; }
+.stats-recount summary{
+  cursor:pointer;
+  font-family:var(--font-mono);
+  font-size:0.68rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--gold-dim);
+}
+.stats-recount summary:hover{ color:var(--maroon-800); }
+.stats-recount__form{
+  display:flex;
+  gap:0.6rem;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top:0.7rem;
+}
+.stats-recount__form select{
+  padding:0.5rem 0.7rem;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  font-family:var(--font-body);
+  font-size:0.88rem;
+  color:var(--ink);
+  max-width:100%;
 }
 
 /* ============================================================

@@ -69,7 +69,7 @@
 <script src="config.js"></script>
 <script>
   document.getElementById("teacherDate").textContent = withDifficulty(TODAY.date, TODAY.guessTheTeacher ? TODAY.guessTheTeacher.difficulty : null);
-  mountTeacherGame(document.getElementById("teacherGameMount"), TODAY, `today::${TODAY.date}`);
+  mountTeacherGame(document.getElementById("teacherGameMount"), TODAY, `today::${TODAY.date}`, TODAY.isoDate);
 </script>
 </body>
 </html>

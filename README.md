@@ -56,6 +56,11 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 ### Unreleased
 
 
+### Version 1.2.1 — August 2026
+- Fixed the Archive: clicking "View" now expands that edition's content directly below the row you clicked, instead of always in one shared panel below the entire list.
+- Added win streaks for Mini Crossword, Weekly Crossword, and Guess the Teacher (not Special Edition, since it's a one-off rather than a recurring schedule), shown on the Stats page. A streak counts consecutive published editions won, and doesn't break just because today's/this week's hasn't been played yet — only an actually-missed edition breaks it.
+- Added a way to recount wins from before the Stats page existed: Guess the Teacher wins are recovered automatically (that game already stored win/lose state locally), and each crossword-type game on the Stats page now has an "Add a past win" control to manually credit an edition you'd already solved, since there's no reliable way to detect that automatically for embedded crosswords.
+
 ### Version 1.2 — August 2026
 - Added a **Stats** page (`stats.html`) showing how many times you've won each game, stored per-browser in `localStorage` (not on a server — clearing your browser's site data resets it).
 - Crossword-type embeds (Mini Crossword, Weekly Crossword, Special Edition) report puzzle completions to the parent page via the embed's own `postMessage` API; wins there and in Guess the Teacher both feed the same stats, deduplicated so replaying an already-won puzzle never inflates the count.

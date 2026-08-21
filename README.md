@@ -9,6 +9,7 @@ Live features:
 - **Guess the Teacher** — three clues (hardest to easiest), three guesses, name the faculty member
 - **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
 - **Archive** — every past edition, auto-populated as new puzzles go live
+- **Stats** — how many times you've won each game, tracked in your own browser
 - More games planned — see the homepage's "Coming Soon" card
 
 ## How it works
@@ -32,6 +33,7 @@ weekly-crossword.html     This week's Weekly Crossword
 guess-the-teacher.html    Today's Guess the Teacher
 special-edition.html      The current Special Edition game (or a "nothing today" message)
 archive.html              Past editions of every game
+stats.html                Per-browser win counts for each game
 config.js                 All puzzle content + shared rendering logic
 styles.css                Shared styling for every page
 logo.png / favicon.png / apple-touch-icon.png   Site branding
@@ -53,6 +55,10 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 
 ### Unreleased
 
+
+### Version 1.2 — August 2026
+- Added a **Stats** page (`stats.html`) showing how many times you've won each game, stored per-browser in `localStorage` (not on a server — clearing your browser's site data resets it).
+- Crossword-type embeds (Mini Crossword, Weekly Crossword, Special Edition) report puzzle completions to the parent page via the embed's own `postMessage` API; wins there and in Guess the Teacher both feed the same stats, deduplicated so replaying an already-won puzzle never inflates the count.
 
 ### Version 1.1.1 — August 2026
 - Grouped Mini Crossword, Weekly Crossword, Guess the Teacher, and Special Edition into a "Games" dropdown in the nav bar (hover to reveal — the trigger itself doesn't navigate anywhere), so the top nav stays short as more games get added.

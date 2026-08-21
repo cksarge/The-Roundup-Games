@@ -155,6 +155,15 @@ a{ color:inherit; }
   color:var(--gold-light);
   border-color:var(--gold-light);
 }
+.dateline__dropdown-caret{
+  display:inline-block;
+  font-size:0.6rem;
+  transition:transform .15s ease;
+}
+.dateline__dropdown:hover .dateline__dropdown-caret,
+.dateline__dropdown:focus-within .dateline__dropdown-caret{
+  transform:rotate(180deg);
+}
 .dateline__dropdown-menu{
   position:absolute;
   top:100%;

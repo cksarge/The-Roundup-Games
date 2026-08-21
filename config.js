@@ -71,7 +71,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.1";
+const SITE_VERSION = "1.1.1";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -515,20 +515,21 @@ function renderSpecialHomepageCard(){
 function renderSpecialEditionPage(){
   const titleEl = document.getElementById("specialTitle");
   const descEl = document.getElementById("specialDesc");
+  const headingEl = document.getElementById("specialPanelHeading");
   const dateEl = document.getElementById("specialDate");
-  const panelEl = document.getElementById("specialPanel");
 
   if (!SPECIAL_EDITION) {
-    if (titleEl) titleEl.textContent = "No Special Edition Today";
-    if (descEl) descEl.textContent = "Sorry, but there is no special edition game today. Check back during school breaks and special occasions.";
-    if (panelEl) panelEl.style.display = "none";
+    if (headingEl) headingEl.textContent = "No Special Edition Today";
+    if (dateEl) dateEl.textContent = "";
+    const wrap = document.getElementById("specialFrameWrap");
+    if (wrap) wrap.innerHTML = `<div class="crossword-fallback">Sorry, but there is no special edition game today. Check back during school breaks and special occasions.</div>`;
     return;
   }
 
   if (titleEl) titleEl.textContent = SPECIAL_EDITION.theme;
   if (descEl) descEl.textContent = "A special one-off game, live for a limited time — enjoy it while it lasts.";
+  if (headingEl) headingEl.textContent = "Play";
   if (dateEl) dateEl.textContent = withDifficulty(SPECIAL_EDITION.date, SPECIAL_EDITION.difficulty);
-  if (panelEl) panelEl.style.display = "";
   renderSpecialEmbed("specialFrameWrap", SPECIAL_EDITION.embedUrl, `Special Edition — ${SPECIAL_EDITION.theme}`);
 }
 

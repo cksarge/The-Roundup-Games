@@ -54,6 +54,10 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 ### Unreleased
 
 
+### Version 1.1.1 — August 2026
+- Grouped Mini Crossword, Weekly Crossword, Guess the Teacher, and Special Edition into a "Games" dropdown in the nav bar (hover to reveal — the trigger itself doesn't navigate anywhere), so the top nav stays short as more games get added.
+- The Special Edition page now shows a "No Special Edition Today" card instead of just hiding the panel when nothing's live.
+
 ### Version 1.1 — August 2026
 - Added the **Special Edition** game (`special-edition.html`): a themed, one-off game slot for school breaks and special occasions. Unlike the recurring games, each entry only shows up between its own start and end date (`SPECIAL_PUZZLES` in `config.js`), then automatically moves to a new "Special Edition" section in the Archive. Any embed type works (crossword, spelling bee, etc.) — it's not tied to one game format. When live, it's a large, prominent banner above the regular game cards on the homepage, with the theme front and center; when there's nothing live, it's a normal card at the bottom of the list.
 - Special Edition entries include a hand-typed `date` label (same pattern as the other games), so the display text isn't limited to the raw start/end dates.

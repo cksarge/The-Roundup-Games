@@ -71,7 +71,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.1.1";
+const SITE_VERSION = "1.1.2";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -259,7 +259,14 @@ const WEEKLY_PUZZLES = [
 */
 
 const SPECIAL_PUZZLES = [
-  // Add Special Edition entries here — see the example above.
+  {
+    startIsoDate: "2026-08-18",
+    endIsoDate: "2026-08-28",
+    date: "First Week of Roundup Games",
+    theme: "Welcome to The Roundup Games",
+    difficulty: "3/5",
+    embedUrl: "https://puzzleme.amuselabs.com/pmm/wordf?id=roundupspecial1&set=carter"
+  }
 ];
 
 /* ================================================================

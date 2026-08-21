@@ -7,6 +7,7 @@ Live features:
 - **Weekly Crossword** — a bigger, themed puzzle posted every Monday
 - **Mini Crossword** — a fresh grid every school day
 - **Guess the Teacher** — three clues (hardest to easiest), three guesses, name the faculty member
+- **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
 - **Archive** — every past edition, auto-populated as new puzzles go live
 - More games planned — see the homepage's "Coming Soon" card
 
@@ -29,6 +30,7 @@ index.html               Homepage — game cards, pulled from GAMES in config.js
 mini-crossword.html       Today's Mini Crossword
 weekly-crossword.html     This week's Weekly Crossword
 guess-the-teacher.html    Today's Guess the Teacher
+special-edition.html      The current Special Edition game (or a "nothing today" message)
 archive.html              Past editions of every game
 config.js                 All puzzle content + shared rendering logic
 styles.css                Shared styling for every page
@@ -51,6 +53,10 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 
 ### Unreleased
 
+
+### Version 1.1 — August 2026
+- Added the **Special Edition** game (`special-edition.html`): a themed, one-off game slot for school breaks and special occasions. Unlike the recurring games, each entry only shows up between its own start and end date (`SPECIAL_PUZZLES` in `config.js`), then automatically moves to a new "Special Edition" section in the Archive. Any embed type works (crossword, spelling bee, etc.) — it's not tied to one game format. When live, it's a large, prominent banner above the regular game cards on the homepage, with the theme front and center; when there's nothing live, it's a normal card at the bottom of the list.
+- Special Edition entries include a hand-typed `date` label (same pattern as the other games), so the display text isn't limited to the raw start/end dates.
 
 ### Version 1.0 — August 2026
 - Initial launch: Weekly Crossword, Mini Crossword, Guess the Teacher, and Archive

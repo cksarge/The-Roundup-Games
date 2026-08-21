@@ -300,6 +300,63 @@ a{ color:inherit; }
 .game-card.is-disabled .btn:hover{ background:transparent; color:var(--ink-soft); }
 
 /* ============================================================
+   SPECIAL EDITION BANNER — shown on the homepage only while a
+   Special Edition game is live, in place of a regular game-card.
+   ============================================================ */
+.special-banner{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:0.5rem;
+  margin:1.6rem 0 0;
+  padding:2.4rem 2.2rem;
+  background:
+    radial-gradient(120% 160% at 85% -20%, rgba(214,184,120,0.22), transparent 60%),
+    linear-gradient(135deg, var(--maroon-800), var(--maroon-950));
+  border:1px solid var(--gold-dim);
+  border-radius:var(--radius);
+  box-shadow:0 20px 46px -18px rgba(36,18,12,0.55);
+  text-decoration:none;
+  color:var(--paper);
+  overflow:hidden;
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.special-banner:hover{
+  transform:translateY(-3px);
+  box-shadow:0 26px 54px -18px rgba(36,18,12,0.65);
+}
+.special-banner__eyebrow{
+  font-family:var(--font-mono);
+  font-size:0.72rem;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--gold-light);
+}
+.special-banner__theme{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:clamp(1.8rem, 4.2vw, 2.6rem);
+  line-height:1.1;
+  margin:0;
+  color:var(--paper);
+}
+.special-banner__meta{
+  font-family:var(--font-mono);
+  font-size:0.78rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--paper-dim);
+  margin:0 0 0.5rem;
+}
+.special-banner .btn{
+  background:var(--gold);
+  border-color:var(--gold);
+  color:var(--maroon-950);
+}
+.special-banner .btn:hover{ background:var(--gold-light); border-color:var(--gold-light); }
+
+/* ============================================================
    PANEL (crossword / teacher-game containers)
    ============================================================ */
 .panel{

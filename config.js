@@ -2,8 +2,8 @@
    THE ROUNDUP GAMES — CONFIG
    ----------------------------------------------------------------
    This file is shared by every page (index.html, mini-crossword.html,
-   weekly-crossword.html, guess-the-teacher.html, archive.html) — so
-   you only ever edit game content in ONE place.
+   weekly-crossword.html, guess-the-teacher.html, special-edition.html,
+   archive.html) — so you only ever edit game content in ONE place.
 
    HOW THIS WORKS NOW
    -----------------------------------------------------------------
@@ -12,6 +12,13 @@
    WEEKLY_PUZZLES. Past, present, and future puzzles all sit in the
    same list, in any order — there's no more manually cutting
    "today" into an archive.
+
+   SPECIAL_PUZZLES works a little differently (see its own section
+   below) — each entry is only "live" between its own start date and
+   end date, then it moves to the archive on its own. It's a one-off
+   game slot (any embed type — a crossword one time, a spelling bee
+   the next, etc.) for things like school breaks or special events,
+   not a regular recurring game.
 
    Each entry just has an isoDate ("2026-08-19"). Using the visitor's
    own device clock, the site figures out on its own:
@@ -43,6 +50,9 @@
    • DAILY_PUZZLES — every Mini Crossword + Guess the Teacher, past/
      present/future, in one list. See resolution rules above.
    • WEEKLY_PUZZLES — every Weekly Crossword, same idea.
+   • SPECIAL_PUZZLES — every Special Edition game, one entry per
+     occasion, each with its own start/end date. See its own section
+     below for details.
    • GAMES — controls the cards on the homepage.
    • SITE_VERSION — shown in the footer. Bump it whenever you want.
    ================================================================ */
@@ -61,7 +71,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.0.1";
+const SITE_VERSION = "1.1";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -198,6 +208,60 @@ const WEEKLY_PUZZLES = [
   // arrives.
 ];
 
+/* ----------------------------------------------------------------
+   SPECIAL EDITION — one-off games (school breaks, special events)
+   ----------------------------------------------------------------
+   Unlike DAILY_PUZZLES/WEEKLY_PUZZLES, a Special Edition doesn't
+   roll forward and keep showing until you add the next one — it
+   only shows up between its own startIsoDate and endIsoDate, then
+   automatically moves to the archive the day after endIsoDate.
+   Before startIsoDate, it doesn't exist anywhere on the site — no
+   homepage card, no hint, nothing.
+
+   Each entry:
+     startIsoDate — "yyyy-mm-dd". First day it's shown as live.
+     endIsoDate   — "yyyy-mm-dd". Last day it's shown as live —
+                    the day after this, it moves to the archive.
+                    Can be the same as startIsoDate for a one-day
+                    special.
+     date         — the display label shown to visitors, e.g.
+                    "December 15–19, 2026" or "Homecoming Week".
+                    Typed by hand on purpose, so you can customize
+                    it — it does NOT have to match the isoDates'
+                    format.
+     theme        — short label describing this occasion, e.g.
+                    "Winter Break" or "Homecoming Week". Shown
+                    prominently on the homepage card and on the
+                    Special Edition page itself.
+     difficulty   — e.g. "3/5". Optional — leave "" if not
+                    applicable to this particular embed type.
+     embedUrl     — the embed link. Can be any embed type (a
+                    crossword one time, a spelling bee the next,
+                    etc.) — it's just shown in an iframe, so there's
+                    no need to describe it as one specific game type
+                    anywhere in this file.
+
+   You can have entries for multiple occasions in this list at once,
+   past/present/future all mixed together, same as the lists above.
+   ---------------------------------------------------------------- */
+
+/* EXAMPLE FOR SPECIAL EDITION
+
+  {
+    startIsoDate: "",
+    endIsoDate: "",
+    date: "",
+    theme: "",
+    difficulty: "",
+    embedUrl: ""
+  },
+
+*/
+
+const SPECIAL_PUZZLES = [
+  // Add Special Edition entries here — see the example above.
+];
+
 /* ================================================================
    RESOLUTION LOGIC — figures out present/past/future from the
    lists above using the visitor's own device clock. You shouldn't
@@ -239,6 +303,32 @@ function resolvePuzzleSet(entries){
   return { current, archive };
 }
 
+/* Special Edition uses a different rule than resolvePuzzleSet above:
+   each entry has its own startIsoDate/endIsoDate range instead of
+   rolling forward indefinitely.
+     current — the entry whose range contains today, or null if none
+     archive — every entry whose endIsoDate has already passed
+   An entry whose startIsoDate hasn't arrived yet is skipped
+   entirely — not current, not archive, invisible. */
+function resolveSpecialPuzzle(entries){
+  const todayIso = getTodayIsoDate();
+  const sorted = [...entries].sort((a, b) => (a.startIsoDate < b.startIsoDate ? -1 : a.startIsoDate > b.startIsoDate ? 1 : 0));
+
+  let current = null;
+  const archive = [];
+
+  for (const entry of sorted) {
+    if (entry.startIsoDate > todayIso) continue; // hasn't started yet — invisible
+    if (entry.endIsoDate < todayIso) {
+      archive.push(entry); // already over
+    } else {
+      current = entry; // live today
+    }
+  }
+
+  return { current, archive };
+}
+
 /* Shown when a list has no entry dated today or earlier yet (e.g.
    brand new site, or every entry you've added so far is a future
    one). Keeps the rest of the page from breaking. */
@@ -262,6 +352,10 @@ const ARCHIVE = DAILY_RESOLVED.archive;
 const WEEKLY_RESOLVED = resolvePuzzleSet(WEEKLY_PUZZLES);
 const WEEKLY_CROSSWORD = WEEKLY_RESOLVED.current || FALLBACK_WEEKLY;
 const WEEKLY_ARCHIVE = WEEKLY_RESOLVED.archive;
+
+const SPECIAL_RESOLVED = resolveSpecialPuzzle(SPECIAL_PUZZLES);
+const SPECIAL_EDITION = SPECIAL_RESOLVED.current; // null when nothing is live today
+const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
 
 /* ----------------------------------------------------------------
    GAMES LIST
@@ -365,6 +459,77 @@ function renderCrossword(mountId, dateId, data, dateLabel){
     return;
   }
   wrap.innerHTML = `<iframe src="${data.crossword.embedUrl}" title="Daily crossword — ${dateLabel || ""}" loading="lazy"></iframe>`;
+}
+
+/* ---------- special edition embed ----------
+   Generic — unlike renderCrossword above, this doesn't assume the
+   embed is a crossword, since a Special Edition can be any embed
+   type (spelling bee, trivia, etc.) depending on the occasion. */
+function renderSpecialEmbed(mountId, embedUrl, titleLabel){
+  const wrap = document.getElementById(mountId);
+  if (!wrap) return;
+  if (!embedUrl || embedUrl.includes("REPLACE")) {
+    wrap.innerHTML = `<div class="crossword-fallback">No embed URL has been set for this special edition yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<iframe src="${embedUrl}" title="${titleLabel}" loading="lazy"></iframe>`;
+}
+
+/* ---------- special edition homepage card (index.html only) ----------
+   Live: a large, prominent banner above the regular games grid.
+   Not live: a normal card at the very bottom of the grid, still
+   linking to special-edition.html (which explains there's nothing
+   live right now). */
+function renderSpecialHomepageCard(){
+  const bannerMount = document.getElementById("specialBanner");
+  const gridMount = document.getElementById("gameCards");
+
+  if (SPECIAL_EDITION) {
+    if (bannerMount) {
+      bannerMount.innerHTML = `
+        <a class="special-banner" href="special-edition.html">
+          <span class="special-banner__eyebrow">✦ Special Edition</span>
+          <h2 class="special-banner__theme">${escapeHtml(SPECIAL_EDITION.theme)}</h2>
+          <p class="special-banner__meta">${withDifficulty(SPECIAL_EDITION.date, SPECIAL_EDITION.difficulty)}</p>
+          <span class="btn">Play →</span>
+        </a>
+      `;
+    }
+    return;
+  }
+
+  if (bannerMount) bannerMount.innerHTML = "";
+  if (!gridMount) return;
+  const card = document.createElement("article");
+  card.className = "game-card";
+  card.innerHTML = `
+    <div class="game-card__row"><span>Special Edition</span></div>
+    <h2>Special Edition</h2>
+    <p>A one-off game for school breaks and special occasions — a different kind of puzzle every time, so check back.</p>
+    <a class="btn" href="special-edition.html">Play →</a>
+  `;
+  gridMount.appendChild(card);
+}
+
+/* ---------- special edition page (special-edition.html only) ---------- */
+function renderSpecialEditionPage(){
+  const titleEl = document.getElementById("specialTitle");
+  const descEl = document.getElementById("specialDesc");
+  const dateEl = document.getElementById("specialDate");
+  const panelEl = document.getElementById("specialPanel");
+
+  if (!SPECIAL_EDITION) {
+    if (titleEl) titleEl.textContent = "No Special Edition Today";
+    if (descEl) descEl.textContent = "Sorry, but there is no special edition game today. Check back during school breaks and special occasions.";
+    if (panelEl) panelEl.style.display = "none";
+    return;
+  }
+
+  if (titleEl) titleEl.textContent = SPECIAL_EDITION.theme;
+  if (descEl) descEl.textContent = "A special one-off game, live for a limited time — enjoy it while it lasts.";
+  if (dateEl) dateEl.textContent = withDifficulty(SPECIAL_EDITION.date, SPECIAL_EDITION.difficulty);
+  if (panelEl) panelEl.style.display = "";
+  renderSpecialEmbed("specialFrameWrap", SPECIAL_EDITION.embedUrl, `Special Edition — ${SPECIAL_EDITION.theme}`);
 }
 
 /* ---------- tiny localStorage helpers (used to remember guesses) ---------- */
@@ -624,6 +789,28 @@ function renderWeeklyArchive(){
   renderArchiveSection(
     "weeklyArchiveList", "weeklyArchiveDetail", WEEKLY_ARCHIVE, renderWeeklyCrosswordArchiveDetail,
     entry => entry.date
+  );
+}
+
+function renderSpecialEditionArchiveDetail(entry, detailEl){
+  detailEl.innerHTML = `
+    <div class="panel">
+      <div class="panel__head">
+        <h2>${escapeHtml(entry.theme)}</h2>
+        <span class="panel__date">${withDifficulty(entry.date, entry.difficulty)}</span>
+      </div>
+      <div class="panel__body">
+        <div class="crossword-frame-wrap" id="specialArchiveWrap"></div>
+      </div>
+    </div>
+  `;
+  renderSpecialEmbed("specialArchiveWrap", entry.embedUrl, `Special Edition — ${entry.theme}`);
+}
+
+function renderSpecialArchive(){
+  renderArchiveSection(
+    "specialArchiveList", "specialArchiveDetail", SPECIAL_ARCHIVE, renderSpecialEditionArchiveDetail,
+    entry => `${entry.theme} — ${entry.date}`
   );
 }
 

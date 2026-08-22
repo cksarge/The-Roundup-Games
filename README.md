@@ -8,6 +8,8 @@ Live features:
 - **Mini Crossword** — a fresh grid every school day
 - **Guess the Teacher** — three clues (hardest to easiest), three guesses, name the faculty member
 - **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
+- **Bronco Dash** — a persistent (always-available, never-changing) side-scrolling track game. Answer trivia to sprint ahead; ticks drain on their own over time, so speed matters
+- **Bronco Splash** — a persistent swim-a-lap game. Answer trivia to refill your air and pick up speed before it runs out
 - **Archive** — every past edition, auto-populated as new puzzles go live
 - **Stats** — how many times you've won each game, tracked in your own browser
 - More games planned — see the homepage's "Coming Soon" card
@@ -22,7 +24,9 @@ This means you can:
 - **Fix a past puzzle** by editing its entry directly, no hunting through a separate archive file.
 - **Add embed links** for crosswords (`crossword.embedUrl`) and they show up automatically wherever that entry is displayed — today's page, the homepage card, or the archive.
 
-See the comments at the top of `config.js` for the full breakdown of `DAILY_PUZZLES`, `WEEKLY_PUZZLES`, and `GAMES`.
+Bronco Dash and Bronco Splash work differently — they're **persistent** games with no date logic at all (same game every time). Both draw from one shared question pool (`PERSISTENT_GAME_QUESTIONS` in `config.js`) in a random order every playthrough — add a question once and it's in the mix for every persistent game, current or future, no dates involved.
+
+See the comments at the top of `config.js` for the full breakdown of `DAILY_PUZZLES`, `WEEKLY_PUZZLES`, `PERSISTENT_GAME_QUESTIONS`, and `GAMES`.
 
 ## Project structure
 
@@ -32,6 +36,8 @@ mini-crossword.html       Today's Mini Crossword
 weekly-crossword.html     This week's Weekly Crossword
 guess-the-teacher.html    Today's Guess the Teacher
 special-edition.html      The current Special Edition game (or a "nothing today" message)
+bronco-dash.html          Bronco Dash (persistent track game)
+bronco-splash.html        Bronco Splash (persistent swimming game)
 archive.html              Past editions of every game
 stats.html                Per-browser win counts for each game
 config.js                 All puzzle content + shared rendering logic
@@ -55,6 +61,27 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 
 ### Unreleased
 
+
+### Version 1.3 prerelease — August 2026
+- Added the site's first **persistent games** — Bronco Dash and Bronco Splash — built from scratch (no embed), each running the same game every time from a large question pool answered in a random order. Both track a fastest time; Bronco Dash also tracks a win count (Bronco Splash doesn't, per design — every swim eventually finishes, so only the time matters). Neither has an Archive entry or a streak, since there's no "edition" or schedule to either of them — it's always the same game.
+- **Bronco Dash**: the player stays centered on screen and starts exactly on the start line. Rather than the player's own position ever slipping backward, a separate red pace line steadily advances on its own — a correct answer pushes the player ahead and widens the gap, a wrong answer costs a 3-second wait while the line keeps closing in. If it catches the player, that's a loss (question input stops, a "Try Again" screen shows) — previously there was no way to actually lose.
+- **Bronco Splash**: air depletes noticeably faster and the lap is a good deal longer, so pacing your answers actually matters instead of coasting to the end.
+- Rebuilt the stick-figure animation for both games with two-segment limbs (thigh+shin, upper arm+forearm) and more keyframes for a much smoother run/swim cycle, plus a proper environment for each — Bronco Dash gets a sky, treeline, and a real running-track surface with lane lines; Bronco Splash gets pool decking, lane ropes, and deeper water.
+- Generalized the Stats page's underlying data model (`STAT_GAMES`) to support win-count-only, best-time-only, or both together, so future game types aren't boxed into the win/streak shape the daily games use.
+- Labeled both persistent games "(BETA)" everywhere their names appear (nav, homepage cards, page titles, Stats) — they're new and still being tuned, and the site version itself is marked as a prerelease for the same reason.
+- Reworked the run cycle with brief holds at each stride's extremes (instead of a smooth back-and-forth swing) and a subtle torso twist, for a snappier, less floaty gait.
+- Fixed a real bug where the swim animation's bob was silently canceling the -90deg rotation that lays the swimmer horizontal (both were animating the same element's `transform`) — the rotation now lives on a separate wrapper so the two no longer fight each other. Swimming also has its own bob and stroke timing now instead of reusing running's.
+- Bronco Splash: the swimmer and the start/finish lines now sit in the vertical middle of the lane, between the lane ropes, instead of at the bottom edge.
+- Bronco Dash: the treeline now sits flush on top of the track surface instead of floating above it with a gap.
+- Marker movement (start/finish/pace lines) now eases between positions instead of snapping instantly, so a correct answer's forward jump reads as a smooth glide rather than a jump cut.
+- Doubled the O2 refill from a correct answer in Bronco Splash.
+- Fixed both figures running/swimming backward: the direction a limb swings when rotated is the opposite of what you'd guess, and the swimmer's orientation had the same issue — swapped both so the runner's legs/arms drive forward correctly and the swimmer leads with its head toward the finish instead of the start.
+- Fixed the "waiting" (wrong answer) and "gasping" (out of air) poses — the waiting pose previously rotated the torso, but the legs are a separate sibling element that doesn't rotate with it, so the body looked disconnected from them; torso now stays upright and only the arms droop. The gasping pose was a perfectly rigid, symmetric zero-rotation on every limb, which read as lifeless — now a relaxed, asymmetric "barely staying afloat" droop.
+- Replaced the CSS-animation-based scrolling background (used for both the track/water motion and the "boost" speed-up on a correct answer) with a JS-driven one — changing `animation-duration` on a running CSS animation causes a visible jump, which is why the boost looked like an abrupt snap. The new version eases the speed up and back down smoothly, and the boost itself is a more modest 1.8x instead of 3-4x, so it no longer looks wildly disproportionate to the actual point gained.
+- The runner now actually stops (freezes, doesn't keep running in place) once it crosses the finish line, instead of still animating behind the finish screen.
+- Fixed the arms still looking inverted after the previous direction fix — the legs were fixed correctly, but the arms got flipped the wrong way in that same pass (arm and leg share the same animation phase on one side of the body, so they need the same sign convention, not opposite ones).
+- Bronco Splash: the pool's scrolling lines now track the swimmer's actual speed instead of a constant rate, so they ease to a stop when out of air (not moving) and ease back up once air is restored, instead of drifting on regardless of whether the swimmer is actually going anywhere.
+- Merged Bronco Dash's and Bronco Splash's separate question pools into one shared `PERSISTENT_GAME_QUESTIONS` list that every persistent game (current or future) draws from, instead of each game keeping its own.
 
 ### Version 1.2.2 — August 2026
 - Removed the manual "Add a past win" self-report control from the Stats page — there's no way to verify a self-reported win is genuine on a static site with no accounts or server, and the honest answer was that it shouldn't exist. Guess the Teacher's automatic recovery of past wins (from state it already stored locally) stays, since that's real data, not a claim.

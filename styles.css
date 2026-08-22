@@ -746,7 +746,462 @@ footer{
 }
 .footer__inner a:hover{ border-color:var(--gold-light); }
 
+/* ============================================================
+   PERSISTENT GAMES (Bronco Dash / Bronco Splash)
+   ============================================================ */
+.game-start{
+  padding:2.4rem 1.5rem;
+  text-align:center;
+}
+.game-start p{
+  max-width:44ch;
+  margin:0 auto 1.4rem;
+  color:var(--ink-soft);
+  font-size:0.96rem;
+  line-height:1.5;
+}
+
+.game-stage{
+  position:relative;
+  height:300px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:linear-gradient(180deg, #7CC4F0 0%, #BFE4FA 55%);
+}
+.game-stage--splash{
+  background:linear-gradient(180deg, #1E6F9E, #145178);
+}
+
+/* ---------- Bronco Dash: sky + treeline + track surface ---------- */
+.game-sky{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(24px 14px at 20% 18%, rgba(255,255,255,0.8), transparent 70%),
+    radial-gradient(30px 16px at 65% 12%, rgba(255,255,255,0.7), transparent 70%),
+    radial-gradient(20px 12px at 85% 22%, rgba(255,255,255,0.7), transparent 70%);
+  z-index:0;
+}
+.game-stage--splash .game-sky{ display:none; }
+
+.game-trees{
+  position:absolute;
+  left:0; right:0;
+  bottom:42%;
+  height:14%;
+  background-image:
+    radial-gradient(circle at 12px 100%, #2F6B3D 9px, transparent 10px),
+    radial-gradient(circle at 34px 100%, #3C7F4C 11px, transparent 12px),
+    radial-gradient(circle at 58px 100%, #2F6B3D 8px, transparent 9px);
+  background-repeat:repeat-x;
+  background-size:78px 100%;
+  z-index:1;
+}
+.game-stage--splash .game-trees{ display:none; }
+
+.game-track{
+  position:absolute;
+  left:0; right:0; bottom:0;
+  height:42%;
+  background:linear-gradient(180deg, #C1552F, #A8431F);
+  z-index:1;
+}
+.game-track::before, .game-track::after{
+  content:"";
+  position:absolute;
+  left:0; right:0;
+  height:2px;
+  background:rgba(255,255,255,0.65);
+}
+.game-track::before{ top:32%; }
+.game-track::after{ top:68%; }
+.game-stage--splash .game-track{ display:none; }
+
+/* ---------- Bronco Splash: pool deck + lane ropes ---------- */
+.game-stage--splash::before, .game-stage--splash::after{
+  content:"";
+  position:absolute;
+  left:0; right:0;
+  height:9%;
+  background:repeating-linear-gradient(90deg, #E9E3D6 0 36px, #D4CBB6 36px 38px);
+  z-index:3;
+}
+.game-stage--splash::before{ top:0; }
+.game-stage--splash::after{ bottom:0; }
+
+.pool-lane-rope{
+  position:absolute;
+  left:0; right:0;
+  height:7px;
+  transform:translateY(-50%);
+  background-image:repeating-linear-gradient(90deg, #E23D3D 0 5px, #ffffff 5px 10px, #E23D3D 10px 15px, #2A7FB8 15px 20px);
+  border-radius:4px;
+  opacity:0.9;
+  z-index:2;
+}
+
+/* decorative infinitely-scrolling ground/water texture — purely for
+   the sense of motion, independent of the actual tick/progress math */
+/* position driven entirely by JS (createScrollDrift in config.js) via
+   background-position-x, not a CSS animation — a CSS animation whose
+   animation-duration changes mid-flight (e.g. speeding up briefly on
+   a correct answer) visibly jumps, because the browser recalculates
+   progress as elapsed-time / new-duration; driving it frame-by-frame
+   from JS lets the speed itself ease up and back down smoothly with
+   no discontinuity. */
+.game-scroll{
+  position:absolute;
+  left:0; right:0; bottom:0;
+  height:42%;
+  background-image:repeating-linear-gradient(90deg, rgba(255,255,255,0.55) 0 4px, transparent 4px 90px);
+  background-size:90px 100%;
+  z-index:2;
+}
+.game-stage--splash .game-scroll{
+  inset:0; bottom:auto; height:100%;
+  background-image:repeating-linear-gradient(90deg, rgba(255,255,255,0.3) 0 8px, transparent 8px 55px);
+  background-size:55px 100%;
+  opacity:0.55;
+}
+
+.game-marker{
+  position:absolute;
+  bottom:0;
+  left:50%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  font-family:var(--font-mono);
+  font-size:0.62rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--maroon-800);
+  z-index:4;
+  will-change:transform;
+  transition:transform 0.15s linear;
+}
+/* splash: markers (and the swimmer, below) sit in the vertical middle
+   of the lane, between the lane ropes, instead of at the bottom edge */
+.game-stage--splash .game-marker{
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.4);
+  top:0; bottom:0;
+  justify-content:center;
+}
+.game-stage--splash .game-marker::before{ height:90px; }
+.game-marker::before{
+  content:"";
+  display:block;
+  width:4px;
+  height:135px;
+  margin-bottom:0.3rem;
+  background:repeating-linear-gradient(180deg, var(--maroon-800) 0 10px, var(--paper) 10px 20px);
+}
+.game-marker--finish::before{
+  background:repeating-linear-gradient(180deg, var(--maroon-950) 0 8px, var(--gold) 8px 16px);
+}
+.game-marker--pace{ color:var(--maroon-600); font-weight:700; }
+.game-marker--pace::before{
+  width:5px;
+  background:var(--maroon-600);
+  box-shadow:0 0 10px rgba(140,32,32,0.7);
+}
+
+.game-player{
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translate(-50%, 0);
+  z-index:5;
+}
+.game-stage--splash .game-player{
+  bottom:auto;
+  top:50%;
+  transform:translate(-50%, -50%);
+}
+.stick-figure{
+  position:relative;
+  width:34px;
+  height:76px;
+}
+.stick-figure__head{
+  position:absolute;
+  top:0; left:50%;
+  width:16px; height:16px;
+  margin-left:-8px;
+  border-radius:50%;
+  background:var(--maroon-900);
+}
+.stick-figure__torso{
+  position:absolute;
+  top:15px; left:50%;
+  width:3px; height:25px;
+  margin-left:-1.5px;
+  background:var(--maroon-900);
+  transform-origin:top center;
+}
+.stick-figure__arm, .stick-figure__forearm, .stick-figure__leg, .stick-figure__shin{
+  position:absolute;
+  width:3px;
+  background:var(--maroon-900);
+  border-radius:2px;
+  transform-origin:top center;
+}
+.stick-figure__arm{ top:18px; left:50%; height:14px; margin-left:-1.5px; }
+.stick-figure__forearm{ top:14px; left:0; height:14px; }
+.stick-figure__leg{ top:40px; left:50%; height:17px; margin-left:-1.5px; }
+.stick-figure__shin{ top:17px; left:0; height:17px; }
+.stick-figure__arm--left{ transform:rotate(15deg); }
+.stick-figure__arm--right{ transform:rotate(-15deg); }
+.stick-figure__leg--left{ transform:rotate(-10deg); }
+.stick-figure__leg--right{ transform:rotate(10deg); }
+
+/* ---------- running cycle (two-segment legs/arms, plus a body bob) ----------
+   Brief holds at the extremes (instead of a smooth sine oscillation)
+   mimic a real footfall/plant rather than a floaty pendulum swing. */
+@keyframes run-bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3.5px); } }
+@keyframes run-torso-twist{ 0%,100%{ transform:rotate(-4deg); } 50%{ transform:rotate(4deg); } }
+/* Sign convention: with transform-origin:top, a POSITIVE rotate()
+   swings a hanging limb's tip toward screen-left, negative toward
+   screen-right. The player runs toward increasing X (right, toward
+   the finish), so "forward" (direction of travel) is NEGATIVE and
+   "backward/trailing" is POSITIVE throughout this cycle. */
+@keyframes run-thigh{
+  0%{ transform:rotate(38deg); }
+  10%{ transform:rotate(38deg); }
+  45%{ transform:rotate(-38deg); }
+  55%{ transform:rotate(-38deg); }
+  90%{ transform:rotate(38deg); }
+  100%{ transform:rotate(38deg); }
+}
+/* bends once, only during the 10%-45% recovery swing (thigh moving
+   backward-to-forward) — straight the rest of the cycle, i.e. during
+   the stance/push-off phase (thigh moving forward-to-backward) */
+@keyframes run-shin{
+  0%{ transform:rotate(8deg); }
+  10%{ transform:rotate(8deg); }
+  27%{ transform:rotate(75deg); }
+  45%{ transform:rotate(10deg); }
+  55%{ transform:rotate(10deg); }
+  90%{ transform:rotate(8deg); }
+  100%{ transform:rotate(8deg); }
+}
+/* Left leg and right arm share the same animation-delay (0), so they
+   move in phase together (correct contralateral gait: they're
+   "forward" and "backward" at the same moments) — which means arm
+   must use the SAME sign pattern as thigh here, not the opposite. */
+@keyframes run-arm{
+  0%{ transform:rotate(40deg); }
+  10%{ transform:rotate(40deg); }
+  45%{ transform:rotate(-40deg); }
+  55%{ transform:rotate(-40deg); }
+  90%{ transform:rotate(40deg); }
+  100%{ transform:rotate(40deg); }
+}
+/* elbow bends most while the arm swings forward (pumping), straighter
+   on the backswing */
+@keyframes run-forearm{
+  0%{ transform:rotate(25deg); }
+  10%{ transform:rotate(25deg); }
+  45%{ transform:rotate(80deg); }
+  55%{ transform:rotate(80deg); }
+  90%{ transform:rotate(25deg); }
+  100%{ transform:rotate(25deg); }
+}
+
+.stick-figure.is-running{ animation:run-bob 0.25s ease-in-out infinite; }
+.stick-figure.is-running .stick-figure__torso{ animation:run-torso-twist 0.5s ease-in-out infinite; }
+.stick-figure.is-running .stick-figure__leg--left{ animation:run-thigh 0.5s ease-in-out infinite; }
+.stick-figure.is-running .stick-figure__leg--left .stick-figure__shin{ animation:run-shin 0.5s ease-in-out infinite; }
+.stick-figure.is-running .stick-figure__leg--right{ animation:run-thigh 0.5s ease-in-out infinite; animation-delay:-0.25s; }
+.stick-figure.is-running .stick-figure__leg--right .stick-figure__shin{ animation:run-shin 0.5s ease-in-out infinite; animation-delay:-0.25s; }
+.stick-figure.is-running .stick-figure__arm--left{ animation:run-arm 0.5s ease-in-out infinite; animation-delay:-0.25s; }
+.stick-figure.is-running .stick-figure__arm--left .stick-figure__forearm{ animation:run-forearm 0.5s ease-in-out infinite; animation-delay:-0.25s; }
+.stick-figure.is-running .stick-figure__arm--right{ animation:run-arm 0.5s ease-in-out infinite; }
+.stick-figure.is-running .stick-figure__arm--right .stick-figure__forearm{ animation:run-forearm 0.5s ease-in-out infinite; }
+
+.stick-figure.is-boost{ animation-duration:0.14s; }
+.stick-figure.is-boost .stick-figure__leg--left,
+.stick-figure.is-boost .stick-figure__leg--right,
+.stick-figure.is-boost .stick-figure__arm--left,
+.stick-figure.is-boost .stick-figure__arm--right{ animation-duration:0.22s; }
+.stick-figure.is-boost .stick-figure__leg--left .stick-figure__shin,
+.stick-figure.is-boost .stick-figure__leg--right .stick-figure__shin,
+.stick-figure.is-boost .stick-figure__arm--left .stick-figure__forearm,
+.stick-figure.is-boost .stick-figure__arm--right .stick-figure__forearm{ animation-duration:0.22s; }
+
+/* waiting-out-a-wrong-answer pose: bent over, still */
+/* Torso stays upright here on purpose — it's a sibling of the legs,
+   not their parent, so rotating it doesn't drag the legs along and
+   previously left the body looking disconnected from them. Legs are
+   left at their normal standing angle (just animation:none, no
+   transform override) and only the arms droop, mirrored left/right,
+   for a "hands on knees, catching your breath" look. */
+.stick-figure.is-waiting{ animation:none; }
+.stick-figure.is-waiting .stick-figure__torso{ animation:none; }
+.stick-figure.is-waiting .stick-figure__leg--left,
+.stick-figure.is-waiting .stick-figure__leg--right{ animation:none; }
+.stick-figure.is-waiting .stick-figure__leg--left .stick-figure__shin,
+.stick-figure.is-waiting .stick-figure__leg--right .stick-figure__shin{ animation:none; transform:rotate(0deg); }
+.stick-figure.is-waiting .stick-figure__arm--left{ animation:none; transform:rotate(-65deg); }
+.stick-figure.is-waiting .stick-figure__arm--left .stick-figure__forearm{ animation:none; transform:rotate(60deg); }
+.stick-figure.is-waiting .stick-figure__arm--right{ animation:none; transform:rotate(65deg); }
+.stick-figure.is-waiting .stick-figure__arm--right .stick-figure__forearm{ animation:none; transform:rotate(-60deg); }
+
+/* ---------- swimming stroke cycle (freestyle-ish arms + flutter-kick legs) ----------
+   The -90deg rotation lives on the wrapper (.stick-figure-orient), not
+   on .stick-figure itself, since .stick-figure also gets its own
+   animated transform (the bob below) — animating transform on an
+   element completely replaces its static transform for that property,
+   so the rotation has to live on a separate parent to survive. */
+.game-stage--splash .stick-figure-orient{ transform:rotate(90deg) translate(-8px, -8px); }
+@keyframes swim-bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-2px); } }
+@keyframes swim-arm{
+  0%{ transform:rotate(-85deg); }
+  8%{ transform:rotate(-85deg); }
+  50%{ transform:rotate(65deg); }
+  60%{ transform:rotate(65deg); }
+  100%{ transform:rotate(-85deg); }
+}
+@keyframes swim-forearm{
+  0%{ transform:rotate(60deg); }
+  20%{ transform:rotate(60deg); }
+  50%{ transform:rotate(8deg); }
+  70%{ transform:rotate(8deg); }
+  100%{ transform:rotate(60deg); }
+}
+@keyframes swim-leg{ 0%,100%{ transform:rotate(-16deg); } 50%{ transform:rotate(16deg); } }
+
+.stick-figure.is-swimming{ animation:swim-bob 0.35s ease-in-out infinite; }
+.stick-figure.is-swimming .stick-figure__arm--left{ animation:swim-arm 0.7s ease-in-out infinite; }
+.stick-figure.is-swimming .stick-figure__arm--left .stick-figure__forearm{ animation:swim-forearm 0.7s ease-in-out infinite; }
+.stick-figure.is-swimming .stick-figure__arm--right{ animation:swim-arm 0.7s ease-in-out infinite; animation-delay:-0.35s; }
+.stick-figure.is-swimming .stick-figure__arm--right .stick-figure__forearm{ animation:swim-forearm 0.7s ease-in-out infinite; animation-delay:-0.35s; }
+.stick-figure.is-swimming .stick-figure__leg--left,
+.stick-figure.is-swimming .stick-figure__leg--left .stick-figure__shin{ animation:swim-leg 0.35s ease-in-out infinite; }
+.stick-figure.is-swimming .stick-figure__leg--right,
+.stick-figure.is-swimming .stick-figure__leg--right .stick-figure__shin{ animation:swim-leg 0.35s ease-in-out infinite; animation-delay:-0.175s; }
+
+.stick-figure.is-boost.is-swimming{ animation-duration:0.18s; }
+.stick-figure.is-boost.is-swimming .stick-figure__arm--left,
+.stick-figure.is-boost.is-swimming .stick-figure__arm--right{ animation-duration:0.4s; }
+.stick-figure.is-boost.is-swimming .stick-figure__arm--left .stick-figure__forearm,
+.stick-figure.is-boost.is-swimming .stick-figure__arm--right .stick-figure__forearm{ animation-duration:0.4s; }
+.stick-figure.is-boost.is-swimming .stick-figure__leg--left,
+.stick-figure.is-boost.is-swimming .stick-figure__leg--right,
+.stick-figure.is-boost.is-swimming .stick-figure__leg--left .stick-figure__shin,
+.stick-figure.is-boost.is-swimming .stick-figure__leg--right .stick-figure__shin{ animation-duration:0.2s; }
+
+/* out of air — arms/legs stop, small gasp indicator */
+/* stopped swimming, but a relaxed "barely treading water" droop
+   rather than a perfectly rigid, symmetric zero pose (which read as
+   lifeless) */
+.stick-figure.is-gasping{ animation:none; }
+.stick-figure.is-gasping .stick-figure__arm--left{ animation:none; transform:rotate(-25deg); }
+.stick-figure.is-gasping .stick-figure__arm--right{ animation:none; transform:rotate(20deg); }
+.stick-figure.is-gasping .stick-figure__leg--left{ animation:none; transform:rotate(12deg); }
+.stick-figure.is-gasping .stick-figure__leg--right{ animation:none; transform:rotate(-8deg); }
+.stick-figure.is-gasping .stick-figure__arm--left .stick-figure__forearm,
+.stick-figure.is-gasping .stick-figure__arm--right .stick-figure__forearm{ animation:none; transform:rotate(30deg); }
+.stick-figure.is-gasping .stick-figure__leg--left .stick-figure__shin,
+.stick-figure.is-gasping .stick-figure__leg--right .stick-figure__shin{ animation:none; transform:rotate(15deg); }
+.stick-figure.is-gasping .stick-figure__head::after{
+  content:"💦";
+  position:absolute;
+  top:-16px; left:16px;
+  font-size:12px;
+}
+
+.game-hud{
+  position:absolute;
+  top:0.7rem; left:0.9rem; right:0.9rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.4rem;
+  z-index:6;
+}
+.game-hud__bar{
+  height:8px;
+  border-radius:99px;
+  background:rgba(36,24,17,0.15);
+  overflow:hidden;
+}
+.game-hud__bar-fill{
+  height:100%;
+  background:var(--maroon-800);
+  transition:width .2s linear;
+}
+.game-hud__bar--o2 .game-hud__bar-fill{ background:#2A7FB8; }
+.game-hud__label{
+  font-family:var(--font-mono);
+  font-size:0.62rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--maroon-900);
+}
+
+.game-question{
+  margin-top:1.4rem;
+  text-align:center;
+}
+.game-question__text{
+  font-family:var(--font-display);
+  font-size:1.2rem;
+  font-weight:600;
+  color:var(--maroon-900);
+  margin:0 0 1rem;
+}
+.game-question__choices{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:0.7rem;
+}
+.game-question__choice{
+  padding:0.7rem 1rem;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--paper-card);
+  font-family:var(--font-body);
+  font-size:0.94rem;
+  color:var(--ink);
+  cursor:pointer;
+  transition:background .15s ease, border-color .15s ease;
+}
+.game-question__choice:hover:not(:disabled){ border-color:var(--maroon-800); }
+.game-question__choice:disabled{ cursor:default; opacity:0.7; }
+.game-question__choice.is-correct{ background:rgba(66,110,64,0.16); border-color:#3E6B3B; }
+.game-question__choice.is-wrong{ background:rgba(140,32,32,0.1); border-color:var(--maroon-600); }
+.game-question__wait{
+  margin:0.9rem 0 0;
+  font-family:var(--font-mono);
+  font-size:0.78rem;
+  letter-spacing:0.04em;
+  color:var(--maroon-800);
+  min-height:1.2em;
+}
+
+.game-finish{
+  padding:2.4rem 1.5rem;
+  text-align:center;
+}
+.game-finish h3{
+  font-family:var(--font-display);
+  font-size:1.5rem;
+  color:var(--maroon-900);
+  margin:0 0 0.6rem;
+}
+.game-finish p{
+  color:var(--ink-soft);
+  font-size:0.98rem;
+  margin:0 0 1.4rem;
+}
+.game-finish .is-new-best{ color:#2E4A2C; font-weight:600; }
+.game-finish--lose h3{ color:var(--maroon-600); }
+
 @media (max-width:560px){
   .crossword-frame-wrap iframe{ height:520px; }
   .panel__body{ padding:1.2rem; }
+  .game-question__choices{ grid-template-columns:1fr; }
+  .game-stage{ height:220px; }
 }

@@ -82,7 +82,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.3";
+const SITE_VERSION = "1.3.1";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -1339,45 +1339,55 @@ function renderSpecialArchive(){
   );
 }
 
-/* ---------- stats page (stats.html only) ---------- */
+/* ---------- stats page (stats.html only) ----------
+   One card per game (STAT_GAMES entry), each listing only the stats
+   that apply to it — a crossword-type game shows Wins/Streak, a
+   persistent race/swim game shows Wins (if tracked) and Fastest
+   time, and Bronco Blitz shows High Score and Lifetime Total as two
+   separate lines rather than mashed into one combined string. */
 function renderStatsPage(){
-  const listEl = document.getElementById("statsList");
-  if (!listEl) return;
+  const mount = document.getElementById("statsList");
+  if (!mount) return;
 
-  listEl.innerHTML = STAT_GAMES.map(game => {
-    const parts = [];
+  mount.innerHTML = STAT_GAMES.map(game => {
+    const stats = [];
 
     if (game.trackWins) {
       const count = getWinCount(game.id);
-      parts.push(`${count} win${count === 1 ? "" : "s"}`);
+      stats.push({ label: "Wins", value: `${count}` });
     }
 
     const streak = computeStreak(game.id);
     if (streak !== null) {
-      parts.push(`${streak} ${game.streakUnit}${streak === 1 ? "" : "s"} streak`);
+      stats.push({ label: "Streak", value: `${streak} ${game.streakUnit}${streak === 1 ? "" : "s"}` });
     }
 
     if (game.trackBestTime) {
       const best = getBestTime(game.id);
-      parts.push(`Fastest: ${best === null ? "—" : formatTime(best)}`);
+      stats.push({ label: "Fastest", value: best === null ? "—" : formatTime(best) });
     }
 
     if (game.trackBestScore) {
       const best = getBestScore(game.id);
-      parts.push(`High score: ${best === null ? "—" : best.toLocaleString()}`);
+      stats.push({ label: "High Score", value: best === null ? "—" : best.toLocaleString() });
     }
 
     if (game.trackPoints) {
-      parts.push(`Lifetime total: ${getPoints(game.id).toLocaleString()} pts`);
+      stats.push({ label: "Lifetime Total", value: `${getPoints(game.id).toLocaleString()} pts` });
     }
 
     return `
-      <li class="stats-row">
-        <div class="stats-row__top">
-          <span class="stats-row__label">${game.label}</span>
-          <span class="stats-row__count">${parts.join(" · ")}</span>
-        </div>
-      </li>
+      <article class="stat-card">
+        <h2>${game.label}</h2>
+        <ul class="stat-card__list">
+          ${stats.map(s => `
+            <li>
+              <span class="stat-card__label">${s.label}</span>
+              <span class="stat-card__value">${s.value}</span>
+            </li>
+          `).join("")}
+        </ul>
+      </article>
     `;
   }).join("");
 }

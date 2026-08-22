@@ -694,43 +694,76 @@ a{ color:inherit; }
 }
 
 /* ============================================================
-   STATS (stats.html)
+   STATS (stats.html) — one ticket-stub card per game, same visual
+   language as the homepage's .game-card
    ============================================================ */
-.stats-list{
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:1.4rem;
+  padding:1.6rem 0 0.6rem;
+}
+.stat-card{
+  position:relative;
+  background:var(--paper-card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:1.4rem 1.4rem 1.5rem;
+}
+.stat-card::after{
+  content:"";
+  position:absolute;
+  left:-9px; top:50%;
+  width:18px; height:18px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:50%;
+  transform:translateY(-50%);
+}
+.stat-card h2{
+  font-family:var(--font-display);
+  font-size:1.25rem;
+  font-weight:600;
+  color:var(--maroon-900);
+  margin:0 0 1rem;
+}
+.stat-card__list{
   list-style:none;
   margin:0;
   padding:0;
-  border-top:1px solid var(--line);
-}
-.stats-row{
-  padding:1rem 0.2rem;
-  border-bottom:1px solid var(--line);
-}
-.stats-row__top{
   display:flex;
-  align-items:center;
+  flex-direction:column;
+  gap:0.6rem;
+}
+.stat-card__list li{
+  display:flex;
+  align-items:baseline;
   justify-content:space-between;
   gap:1rem;
-  flex-wrap:wrap;
+  padding-top:0.6rem;
+  border-top:1px solid var(--line);
 }
-.stats-row__label{
+.stat-card__list li:first-child{ padding-top:0; border-top:none; }
+.stat-card__label{
+  font-family:var(--font-mono);
+  font-size:0.68rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--gold-dim);
+}
+.stat-card__value{
   font-family:var(--font-body);
   font-size:1.05rem;
+  font-weight:600;
   color:var(--ink);
 }
-.stats-row__count{
-  font-family:var(--font-mono);
-  font-size:0.9rem;
-  letter-spacing:0.04em;
-  text-transform:uppercase;
-  color:var(--maroon-800);
-  font-weight:600;
-}
 .stats-note{
-  margin-top:1.4rem;
+  margin-top:0.8rem;
   color:var(--ink-soft);
   font-size:0.86rem;
   line-height:1.5;
+  text-align:center;
 }
 
 /* ============================================================
@@ -1281,6 +1314,42 @@ footer{
   min-height:1.2em;
   text-align:center;
   margin:0.7rem 0 0;
+}
+
+/* ============================================================
+   404 (404.html)
+   ============================================================ */
+.error-page{
+  min-height:50vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:4rem 1.25rem;
+}
+.error-page__code{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:clamp(4.5rem, 14vw, 8rem);
+  line-height:1;
+  color:var(--maroon-800);
+  opacity:0.85;
+  margin:0;
+}
+.error-page h1{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:clamp(1.5rem, 4vw, 2.1rem);
+  color:var(--maroon-900);
+  margin:0.5rem 0 0.7rem;
+}
+.error-page p:not(.error-page__code){
+  max-width:44ch;
+  color:var(--ink-soft);
+  font-size:1rem;
+  line-height:1.55;
+  margin:0 0 1.6rem;
 }
 
 @media (max-width:560px){

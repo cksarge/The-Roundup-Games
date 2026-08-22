@@ -42,6 +42,7 @@ bronco-splash.html        Bronco Splash (persistent swimming game)
 bronco-blitz.html         Bronco Blitz (persistent trivia speed round)
 archive.html              Past editions of every game
 stats.html                Per-browser win counts for each game
+404.html                  Shown for any URL that doesn't match a real page
 config.js                 All puzzle content + shared rendering logic
 styles.css                Shared styling for every page
 logo.png / favicon.png / apple-touch-icon.png   Site branding
@@ -63,6 +64,10 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 
 ### Unreleased
 
+
+### Version 1.3.1 — August 2026
+- Added a `404.html` page (matching the rest of the site's look, with a link back to the homepage) for any URL that doesn't match a real page. On GitHub Pages this is served automatically for unmatched routes with no extra configuration — other static hosts (Netlify, Vercel, Cloudflare Pages, etc.) typically need a one-line config pointing their "not found" setting at this file.
+- Stats page now shows one ticket-stub card per game (matching the homepage's game-card style) instead of one shared list, with each stat (Wins, Streak, Fastest, High Score, Lifetime Total) as its own labeled line rather than mashed into one string. The per-browser privacy note at the bottom is now centered and shorter: "Tracked in your browser on only this device • Clearing browser history will clear this data."
 
 ### Version 1.3 — August 2026
 - Replaced the persistent games' generic trivia pool with a set of ~70 Brophy-specific questions covering the school's history and founding, campus and traditions, academics, general facts, and athletics (including specific championship years) — so Bronco Dash, Bronco Splash, and Bronco Blitz now quiz players on Brophy itself rather than general trivia.

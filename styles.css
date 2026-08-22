@@ -276,6 +276,31 @@ a{ color:inherit; }
 /* ============================================================
    GAME CARDS — ticket-stub styling
    ============================================================ */
+
+/* labeled dividers on the homepage — one above the daily/weekly
+   games grid, one between it and the persistent games grid — so
+   it's unambiguous which games change day-to-day and which don't */
+.games-divider{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  margin:1.2rem 0 0.2rem;
+}
+.games-divider::before, .games-divider::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:var(--line);
+}
+.games-divider span{
+  font-family:var(--font-mono);
+  font-size:0.72rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--gold-dim);
+  white-space:nowrap;
+}
+
 .games{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
@@ -1198,6 +1223,65 @@ footer{
 }
 .game-finish .is-new-best{ color:#2E4A2C; font-weight:600; }
 .game-finish--lose h3{ color:var(--maroon-600); }
+
+/* ============================================================
+   BRONCO BLITZ (trivia speed round — no stage/figure, just a
+   countdown, a running score, and A/B/C/D questions)
+   ============================================================ */
+.trivia-timerbar{
+  height:8px;
+  border-radius:99px;
+  background:rgba(36,24,17,0.15);
+  overflow:hidden;
+  margin-bottom:1.2rem;
+}
+.trivia-timerbar__fill{
+  height:100%;
+  background:var(--maroon-800);
+  transition:width .1s linear, background .2s ease;
+}
+.trivia-timerbar__fill.is-low{ background:var(--maroon-600); }
+
+.trivia-hud{
+  display:flex;
+  justify-content:space-between;
+  gap:1rem;
+  flex-wrap:wrap;
+  margin-bottom:0.6rem;
+}
+.trivia-hud__stat{
+  font-family:var(--font-mono);
+  font-size:0.68rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--maroon-800);
+}
+.trivia-hud__stat strong{
+  display:block;
+  font-family:var(--font-display);
+  font-size:1.3rem;
+  font-weight:600;
+  letter-spacing:0;
+  text-transform:none;
+  color:var(--maroon-900);
+}
+.trivia-hud__stat--streak.is-hot strong{ color:var(--gold-dim); }
+
+.game-question__choice .choice-letter{
+  font-family:var(--font-mono);
+  font-weight:700;
+  color:var(--gold-dim);
+  margin-right:0.5em;
+}
+
+.trivia-points{
+  font-family:var(--font-mono);
+  font-size:0.86rem;
+  color:var(--ink-soft);
+  min-height:1.2em;
+  text-align:center;
+  margin:0.7rem 0 0;
+}
 
 @media (max-width:560px){
   .crossword-frame-wrap iframe{ height:520px; }

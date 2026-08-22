@@ -3,8 +3,8 @@
    ----------------------------------------------------------------
    This file is shared by every page (index.html, mini-crossword.html,
    weekly-crossword.html, guess-the-teacher.html, special-edition.html,
-   bronco-dash.html, bronco-splash.html, archive.html) — so you only
-   ever edit game content in ONE place.
+   bronco-dash.html, bronco-splash.html, bronco-blitz.html, archive.html)
+   — so you only ever edit game content in ONE place.
 
    HOW THIS WORKS NOW
    -----------------------------------------------------------------
@@ -82,7 +82,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.3 prerelease";
+const SITE_VERSION = "1.3-pre.1";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -290,10 +290,11 @@ const SPECIAL_PUZZLES = [
    run somehow outlasts it, so it never runs dry).
 
    One shared pool (PERSISTENT_GAME_QUESTIONS) feeds every persistent
-   game — Bronco Dash, Bronco Splash, and any added later — rather
-   than each game keeping its own separate list. Add a question once
-   here and it's in the mix for all of them; each game still shuffles
-   its own independent run order, they just draw from the same well.
+   game — Bronco Dash, Bronco Splash, Bronco Blitz, and any added
+   later — rather than each game keeping its own separate list. Add a
+   question once here and it's in the mix for all of them; each game
+   still shuffles its own independent run order, they just draw from
+   the same well.
 
    Each entry:
      question     — the question text.
@@ -442,6 +443,13 @@ const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
    automatically — you don't need to edit it here too. Leave `href`
    as null for a game that isn't playable yet (like the placeholder
    below) — it'll show as a quiet "coming soon" card with no link.
+   `category` controls which homepage grid a card lands in —
+   "daily" for the recurring/scheduled games (also where the
+   "coming soon" placeholder lives, since it's about more of that
+   kind of content), "persistent" for the always-available games
+   (Bronco Dash/Splash/Blitz). renderGameCards splits on this field
+   and a divider is shown between the two grids so it's clear which
+   games change day-to-day and which don't.
    ---------------------------------------------------------------- */
 const GAMES = [
   {
@@ -450,7 +458,8 @@ const GAMES = [
     blurb: "A fresh grid every school day — quotes, campus lingo, and the occasional Latin motto.",
     date: TODAY.date,
     difficulty: TODAY.crossword.difficulty,
-    href: "mini-crossword.html"
+    href: "mini-crossword.html",
+    category: "daily"
   },
   {
     id: "weekly-crossword",
@@ -458,7 +467,8 @@ const GAMES = [
     blurb: "A bigger, themed puzzle — posted every Monday.",
     date: WEEKLY_CROSSWORD.date,
     difficulty: WEEKLY_CROSSWORD.difficulty,
-    href: "weekly-crossword.html"
+    href: "weekly-crossword.html",
+    category: "daily"
   },
   {
     id: "guess-teacher",
@@ -466,7 +476,8 @@ const GAMES = [
     blurb: "Three clues, hardest to easiest, three guesses. Can you name the faculty member?",
     date: TODAY.date,
     difficulty: TODAY.guessTheTeacher ? TODAY.guessTheTeacher.difficulty : null,
-    href: "guess-the-teacher.html"
+    href: "guess-the-teacher.html",
+    category: "daily"
   },
   {
     id: "bronco-dash",
@@ -474,7 +485,8 @@ const GAMES = [
     blurb: "Race down the track, answering questions to sprint ahead — reach the finish line as fast as you can.",
     date: "Always Available",
     difficulty: null,
-    href: "bronco-dash.html"
+    href: "bronco-dash.html",
+    category: "persistent"
   },
   {
     id: "bronco-splash",
@@ -482,7 +494,17 @@ const GAMES = [
     blurb: "Swim a lap before your air runs out — answer questions to catch your breath and pick up speed.",
     date: "Always Available",
     difficulty: null,
-    href: "bronco-splash.html"
+    href: "bronco-splash.html",
+    category: "persistent"
+  },
+  {
+    id: "bronco-blitz",
+    title: "Bronco Blitz (BETA)",
+    blurb: "30 seconds, A/B/C/D trivia — chain correct answers for a growing multiplier and race the clock for a speed bonus.",
+    date: "Always Available",
+    difficulty: null,
+    href: "bronco-blitz.html",
+    category: "persistent"
   },
   {
     id: "coming-soon",
@@ -490,7 +512,8 @@ const GAMES = [
     blurb: "We're building out the rest of the puzzle page. Check back for new additions.",
     date: null,
     difficulty: null,
-    href: null
+    href: null,
+    category: "daily"
   }
 ];
 
@@ -513,12 +536,22 @@ function normalizeAnswer(str){
     .trim();
 }
 
-/* ---------- homepage game cards ---------- */
+/* ---------- homepage game cards ----------
+   Two separate grids — one for the recurring/scheduled games
+   ("dailyGameCards"), one for the always-available persistent games
+   ("persistentGameCards") — split by each GAMES entry's `category`,
+   with a divider between them in the markup so it's unambiguous
+   which games change day-to-day and which are the same every time. */
 function renderGameCards(){
-  const mount = document.getElementById("gameCards");
-  if (!mount) return;
-  mount.innerHTML = "";
+  const dailyMount = document.getElementById("dailyGameCards");
+  const persistentMount = document.getElementById("persistentGameCards");
+  if (!dailyMount && !persistentMount) return;
+  if (dailyMount) dailyMount.innerHTML = "";
+  if (persistentMount) persistentMount.innerHTML = "";
+
   GAMES.forEach(game => {
+    const mount = game.category === "persistent" ? persistentMount : dailyMount;
+    if (!mount) return;
     const isPlayable = !!game.href;
     const card = document.createElement("article");
     card.className = "game-card" + (isPlayable ? "" : " is-disabled");
@@ -602,12 +635,13 @@ function initPuzzleCompletionListener(){
 
 /* ---------- special edition homepage card (index.html only) ----------
    Live: a large, prominent banner above the regular games grid.
-   Not live: a normal card at the very bottom of the grid, still
-   linking to special-edition.html (which explains there's nothing
-   live right now). */
+   Not live: a normal card at the very bottom of the persistent
+   games grid (right under Bronco Blitz), still linking to
+   special-edition.html (which explains there's nothing live right
+   now). */
 function renderSpecialHomepageCard(){
   const bannerMount = document.getElementById("specialBanner");
-  const gridMount = document.getElementById("gameCards");
+  const gridMount = document.getElementById("persistentGameCards");
 
   if (SPECIAL_EDITION) {
     if (bannerMount) {
@@ -701,23 +735,29 @@ function escapeHtml(str){
    them run on a recurring schedule, so "consecutive" doesn't mean
    anything for them).
 
-   `trackWins` / `trackBestTime` control what actually shows up on
-   the Stats page for a category — most games track wins only, the
-   persistent games (Bronco Dash, Bronco Splash) also (or only) track
-   a fastest time, stored separately in stats.bestTimes. */
+   `trackWins` / `trackBestTime` / `trackPoints` / `trackBestScore`
+   control what actually shows up on the Stats page for a category —
+   most games track wins only, the persistent track/swim games
+   (Bronco Dash, Bronco Splash) also (or only) track a fastest time,
+   stored separately in stats.bestTimes, and the trivia game (Bronco
+   Blitz) tracks both a lifetime point total (stats.points — every
+   round played adds to this, see addPoints) and a single-round high
+   score (stats.bestScores — only the best round ever, see
+   recordBestScore), shown as two separate stats rather than one. */
 const STATS_STORAGE_KEY = "roundup:stats";
 const STAT_GAMES = [
-  { id: "miniCrossword", label: "Mini Crossword", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false },
-  { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false },
-  { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false },
-  { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false },
-  { id: "broncoDash", label: "Bronco Dash (BETA)", streak: false, streakUnit: null, trackWins: true, trackBestTime: true },
-  { id: "broncoSplash", label: "Bronco Splash (BETA)", streak: false, streakUnit: null, trackWins: false, trackBestTime: true }
+  { id: "miniCrossword", label: "Mini Crossword", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "broncoDash", label: "Bronco Dash (BETA)", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false },
+  { id: "broncoSplash", label: "Bronco Splash (BETA)", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false },
+  { id: "broncoBlitz", label: "Bronco Blitz (BETA)", streak: false, streakUnit: null, trackWins: false, trackBestTime: false, trackPoints: true, trackBestScore: true }
 ];
 
 function loadStats(){
   const raw = loadGameState(STATS_STORAGE_KEY);
-  const stats = { streakWins: {}, bestTimes: {} };
+  const stats = { streakWins: {}, bestTimes: {}, points: {}, bestScores: {} };
   STAT_GAMES.forEach(game => {
     stats[game.id] = (raw && Array.isArray(raw[game.id])) ? raw[game.id] : [];
     if (game.streak) {
@@ -725,6 +765,12 @@ function loadStats(){
     }
     if (game.trackBestTime) {
       stats.bestTimes[game.id] = (raw && raw.bestTimes && typeof raw.bestTimes[game.id] === "number") ? raw.bestTimes[game.id] : null;
+    }
+    if (game.trackPoints) {
+      stats.points[game.id] = (raw && raw.points && typeof raw.points[game.id] === "number") ? raw.points[game.id] : 0;
+    }
+    if (game.trackBestScore) {
+      stats.bestScores[game.id] = (raw && raw.bestScores && typeof raw.bestScores[game.id] === "number") ? raw.bestScores[game.id] : null;
     }
   });
   return stats;
@@ -749,6 +795,46 @@ function recordBestTime(category, seconds){
 
 function getBestTime(category){
   return loadStats().bestTimes[category];
+}
+
+/* Adds `amount` to a category's lifetime point total (every round
+   played adds to the running total, unlike recordBestTime above
+   which only keeps the single best value) and returns the new
+   total. */
+function addPoints(category, amount){
+  const game = STAT_GAMES.find(g => g.id === category);
+  if (!game || !game.trackPoints || typeof amount !== "number" || !isFinite(amount)) return null;
+
+  const stats = loadStats();
+  stats.points[category] = (stats.points[category] || 0) + Math.max(0, Math.round(amount));
+  saveGameState(STATS_STORAGE_KEY, stats);
+  return stats.points[category];
+}
+
+function getPoints(category){
+  return loadStats().points[category] || 0;
+}
+
+/* Records a single round's score for a category, keeping only the
+   highest one ever seen (unlike addPoints above, which accumulates
+   every round instead of just the best). Returns true if this was a
+   new best (so the finish screen can say so), false otherwise. */
+function recordBestScore(category, score){
+  const game = STAT_GAMES.find(g => g.id === category);
+  if (!game || !game.trackBestScore || typeof score !== "number" || !isFinite(score)) return false;
+
+  const stats = loadStats();
+  const current = stats.bestScores[category];
+  const isNewBest = current === null || score > current;
+  if (isNewBest) {
+    stats.bestScores[category] = score;
+    saveGameState(STATS_STORAGE_KEY, stats);
+  }
+  return isNewBest;
+}
+
+function getBestScore(category){
+  return loadStats().bestScores[category];
 }
 
 /* 83.4 -> "1:23.4" */
@@ -1211,6 +1297,15 @@ function renderStatsPage(){
       parts.push(`Fastest: ${best === null ? "—" : formatTime(best)}`);
     }
 
+    if (game.trackBestScore) {
+      const best = getBestScore(game.id);
+      parts.push(`High score: ${best === null ? "—" : best.toLocaleString()}`);
+    }
+
+    if (game.trackPoints) {
+      parts.push(`Lifetime total: ${getPoints(game.id).toLocaleString()} pts`);
+    }
+
     return `
       <li class="stats-row">
         <div class="stats-row__top">
@@ -1223,11 +1318,12 @@ function renderStatsPage(){
 }
 
 /* ================================================================
-   PERSISTENT GAME ENGINE (Bronco Dash / Bronco Splash)
+   PERSISTENT GAME ENGINE (Bronco Dash / Bronco Splash / Bronco Blitz)
    ----------------------------------------------------------------
-   Shared helpers used by both games below, since structurally
-   they're the same loop: a continuously-updating progress value,
-   a nonstop stream of multiple-choice questions, and a win check.
+   Shared helpers used by the games below — createQuestionQueue and
+   escapeHtml are used by all three; the marker/bar/scroll-drift
+   helpers are specific to Dash and Splash's track/pool visuals, since
+   Blitz has no stage of its own, just a running score and a clock.
    ================================================================ */
 
 function shuffleArray(arr){
@@ -1612,6 +1708,172 @@ function initBroncoSplash(){
     drift = createScrollDrift(scrollEl, SCROLL_BASE_SPEED);
     stepTimer = setInterval(step, STEP_MS);
     timerInterval = setInterval(updateTimerDisplay, 100);
+    askQuestion();
+  }
+
+  startBtn.addEventListener("click", startGame);
+  if (playAgainBtn) playAgainBtn.addEventListener("click", startGame);
+}
+
+/* ---------- Bronco Blitz ----------
+   A 30-second trivia speed round — no track/pool/figure, just a
+   running score built from A/B/C/D questions. Each correct answer
+   is worth a base 100 points, multiplied by a streak multiplier
+   (grows with consecutive correct answers, capped at 3x) plus a
+   flat speed bonus that tapers off the longer you take to answer.
+   A wrong answer breaks the streak and locks out answering for 3
+   seconds — the 30-second clock keeps running the whole time,
+   lockout included, so a wrong answer costs real time. */
+function initBroncoBlitz(){
+  const prefix = "blitz";
+  const startPanel = document.getElementById(`${prefix}StartPanel`);
+  const startBtn = document.getElementById(`${prefix}StartBtn`);
+  const playAgainBtn = document.getElementById(`${prefix}PlayAgainBtn`);
+  const gameEl = document.getElementById(`${prefix}Game`);
+  const finishPanel = document.getElementById(`${prefix}FinishPanel`);
+  const finishScoreEl = document.getElementById(`${prefix}FinishScore`);
+  const timerEl = document.getElementById(`${prefix}Timer`);
+  const timerFillEl = document.getElementById(`${prefix}TimerFill`);
+  const scoreEl = document.getElementById(`${prefix}Score`);
+  const streakEl = document.getElementById(`${prefix}Streak`);
+  const streakStatEl = document.getElementById(`${prefix}StreakStat`);
+  const textEl = document.getElementById(`${prefix}QuestionText`);
+  const choicesEl = document.getElementById(`${prefix}Choices`);
+  const pointsMsgEl = document.getElementById(`${prefix}PointsMsg`);
+  const waitEl = document.getElementById(`${prefix}WaitMsg`);
+  if (!startBtn) return;
+
+  const GAME_MS = 30000, LOW_TIME_MS = 5000;
+  const BASE_POINTS = 100;
+  const STREAK_STEP = 0.25, STREAK_MULTIPLIER_CAP = 3;
+  const WRONG_LOCKOUT_MS = 3000;
+  const SPEED_BONUS_MAX = 50, SPEED_BONUS_WINDOW_MS = 5000;
+  const STEP_MS = 100;
+  const LETTERS = ["A", "B", "C", "D"];
+
+  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS);
+
+  let score = 0;
+  let streak = 0;
+  let remainingMs = GAME_MS;
+  let questionShownAt = null;
+  let finished = false;
+  let stepTimer = null;
+  let waitTimeout = null;
+
+  /* 0 correct in a row -> 1x. Each additional one in a row adds
+     STREAK_STEP, capped at STREAK_MULTIPLIER_CAP. */
+  function currentMultiplier(){
+    return streak > 0 ? Math.min(1 + (streak - 1) * STREAK_STEP, STREAK_MULTIPLIER_CAP) : 1;
+  }
+
+  function updateHud(){
+    if (scoreEl) scoreEl.textContent = score.toLocaleString();
+    if (streakEl) streakEl.textContent = streak > 0 ? `${streak} (×${currentMultiplier().toFixed(2)})` : "0";
+    if (streakStatEl) streakStatEl.classList.toggle("is-hot", streak >= 3);
+  }
+
+  function updateTimerDisplay(){
+    const secs = Math.max(0, remainingMs / 1000);
+    if (timerEl) timerEl.textContent = `0:${Math.ceil(secs).toString().padStart(2, "0")}`;
+    if (timerFillEl) {
+      timerFillEl.style.width = `${Math.max(0, remainingMs / GAME_MS) * 100}%`;
+      timerFillEl.classList.toggle("is-low", remainingMs <= LOW_TIME_MS);
+    }
+  }
+
+  function askQuestion(){
+    if (finished) return;
+    if (waitEl) waitEl.textContent = "";
+    if (pointsMsgEl) pointsMsgEl.textContent = "";
+    const question = nextQuestion();
+    questionShownAt = Date.now();
+
+    if (textEl) textEl.textContent = question.question;
+    if (!choicesEl) return;
+    choicesEl.innerHTML = question.choices.map((choice, i) =>
+      `<button class="game-question__choice" type="button" data-choice-index="${i}"><span class="choice-letter">${LETTERS[i]}.</span>${escapeHtml(choice)}</button>`
+    ).join("");
+
+    choicesEl.querySelectorAll("[data-choice-index]").forEach(btn => {
+      btn.addEventListener("click", () => handleAnswer(question, Number(btn.dataset.choiceIndex), btn));
+    });
+  }
+
+  function handleAnswer(question, choiceIndex, btn){
+    if (finished) return;
+    choicesEl.querySelectorAll("[data-choice-index]").forEach(b => { b.disabled = true; });
+
+    const correct = choiceIndex === question.correctIndex;
+    btn.classList.add(correct ? "is-correct" : "is-wrong");
+    if (!correct) {
+      const correctBtn = choicesEl.querySelector(`[data-choice-index="${question.correctIndex}"]`);
+      if (correctBtn) correctBtn.classList.add("is-correct");
+    }
+
+    if (correct) {
+      streak += 1;
+      const elapsed = questionShownAt !== null ? Date.now() - questionShownAt : SPEED_BONUS_WINDOW_MS;
+      const speedBonus = Math.round(SPEED_BONUS_MAX * Math.max(0, (SPEED_BONUS_WINDOW_MS - elapsed) / SPEED_BONUS_WINDOW_MS));
+      const earned = Math.round(BASE_POINTS * currentMultiplier()) + speedBonus;
+      score += earned;
+      updateHud();
+      if (pointsMsgEl) pointsMsgEl.textContent = `+${earned} pts` + (speedBonus > 0 ? ` (includes +${speedBonus} speed bonus)` : "");
+      setTimeout(askQuestion, 400);
+    } else {
+      streak = 0;
+      updateHud();
+      let remaining = Math.round(WRONG_LOCKOUT_MS / 1000);
+      const tick = () => {
+        if (finished) return;
+        if (remaining <= 0) {
+          if (waitEl) waitEl.textContent = "";
+          askQuestion();
+          return;
+        }
+        if (waitEl) waitEl.textContent = `Wrong — wait ${remaining}s…`;
+        remaining -= 1;
+        waitTimeout = setTimeout(tick, 1000);
+      };
+      tick();
+    }
+  }
+
+  function step(){
+    if (finished) return;
+    remainingMs -= STEP_MS;
+    updateTimerDisplay();
+    if (remainingMs <= 0) endGame();
+  }
+
+  function endGame(){
+    finished = true;
+    clearInterval(stepTimer);
+    clearTimeout(waitTimeout);
+    if (choicesEl) choicesEl.querySelectorAll("[data-choice-index]").forEach(b => { b.disabled = true; });
+    if (waitEl) waitEl.textContent = "";
+    if (gameEl) gameEl.hidden = true;
+    addPoints("broncoBlitz", score);
+    const isNewBest = recordBestScore("broncoBlitz", score);
+    if (finishScoreEl) {
+      finishScoreEl.innerHTML = `You scored ${score.toLocaleString()} points` + (isNewBest ? ` <span class="is-new-best">— new high score!</span>` : "") + ` — added to your lifetime total on the Stats page.`;
+    }
+    if (finishPanel) finishPanel.hidden = false;
+  }
+
+  function startGame(){
+    score = 0;
+    streak = 0;
+    remainingMs = GAME_MS;
+    finished = false;
+    if (startPanel) startPanel.hidden = true;
+    if (finishPanel) finishPanel.hidden = true;
+    if (gameEl) gameEl.hidden = false;
+    updateHud();
+    updateTimerDisplay();
+    clearInterval(stepTimer);
+    clearTimeout(waitTimeout);
+    stepTimer = setInterval(step, STEP_MS);
     askQuestion();
   }
 

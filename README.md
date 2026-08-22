@@ -10,6 +10,7 @@ Live features:
 - **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
 - **Bronco Dash** — a persistent (always-available, never-changing) side-scrolling track game. Answer trivia to sprint ahead; ticks drain on their own over time, so speed matters
 - **Bronco Splash** — a persistent swim-a-lap game. Answer trivia to refill your air and pick up speed before it runs out
+- **Bronco Blitz** — a persistent 30-second trivia speed round. Answer A/B/C/D questions for 100 points each, times a streak multiplier that grows the longer your correct-answer streak runs, plus a speed bonus for fast answers; a wrong answer breaks the streak and locks you out for 3 seconds while the clock keeps running
 - **Archive** — every past edition, auto-populated as new puzzles go live
 - **Stats** — how many times you've won each game, tracked in your own browser
 - More games planned — see the homepage's "Coming Soon" card
@@ -24,7 +25,7 @@ This means you can:
 - **Fix a past puzzle** by editing its entry directly, no hunting through a separate archive file.
 - **Add embed links** for crosswords (`crossword.embedUrl`) and they show up automatically wherever that entry is displayed — today's page, the homepage card, or the archive.
 
-Bronco Dash and Bronco Splash work differently — they're **persistent** games with no date logic at all (same game every time). Both draw from one shared question pool (`PERSISTENT_GAME_QUESTIONS` in `config.js`) in a random order every playthrough — add a question once and it's in the mix for every persistent game, current or future, no dates involved.
+Bronco Dash, Bronco Splash, and Bronco Blitz work differently — they're **persistent** games with no date logic at all (same game every time). All three draw from one shared question pool (`PERSISTENT_GAME_QUESTIONS` in `config.js`) in a random order every playthrough — add a question once and it's in the mix for every persistent game, current or future, no dates involved.
 
 See the comments at the top of `config.js` for the full breakdown of `DAILY_PUZZLES`, `WEEKLY_PUZZLES`, `PERSISTENT_GAME_QUESTIONS`, and `GAMES`.
 
@@ -38,6 +39,7 @@ guess-the-teacher.html    Today's Guess the Teacher
 special-edition.html      The current Special Edition game (or a "nothing today" message)
 bronco-dash.html          Bronco Dash (persistent track game)
 bronco-splash.html        Bronco Splash (persistent swimming game)
+bronco-blitz.html         Bronco Blitz (persistent trivia speed round)
 archive.html              Past editions of every game
 stats.html                Per-browser win counts for each game
 config.js                 All puzzle content + shared rendering logic
@@ -61,6 +63,12 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 
 ### Unreleased
 
+
+### Version 1.3-pre.1 — August 2026
+- Added **Bronco Blitz (BETA)**, a third persistent game: a 30-second A/B/C/D trivia speed round drawing from the same shared `PERSISTENT_GAME_QUESTIONS` pool as Bronco Dash and Bronco Splash. Each correct answer is worth a base 100 points, multiplied by a streak bonus that grows with consecutive correct answers (capped at 3x), plus a speed bonus that tapers off the longer you take to answer. A wrong answer breaks the streak and locks out answering for 3 seconds — the clock keeps running through the lockout, so it costs real time.
+- Generalized the Stats page's `STAT_GAMES` model with `trackPoints` and `trackBestScore` options (alongside the existing `trackWins`/`trackBestTime`) for games that track points — Bronco Blitz is the first to use them, showing its lifetime point total (every round played adds to it) and its single-round high score as two separate stats, since they answer different questions ("how much have I played" vs. "what's my best round").
+- Homepage now splits the game cards into two grids with a matching labeled divider above each — "Today & This Week" (Mini Crossword, Weekly Crossword, Guess the Teacher, and the "More Games Coming Soon" placeholder) and "Persistent Games — Always Available" (Bronco Dash, Bronco Splash, Bronco Blitz) — so it's unambiguous which games change day-to-day and which don't. Controlled by a new `category` field on each `GAMES` entry in `config.js`.
+- Special Edition's homepage card, when nothing is currently live, now sits at the bottom of the persistent games grid (right under Bronco Blitz) instead of the daily grid — it's neither a daily nor a scheduled-recurring slot in the way Mini/Weekly/Guess the Teacher are, so it reads better grouped with the other "check in any time" cards.
 
 ### Version 1.3 prerelease — August 2026
 - Added the site's first **persistent games** — Bronco Dash and Bronco Splash — built from scratch (no embed), each running the same game every time from a large question pool answered in a random order. Both track a fastest time; Bronco Dash also tracks a win count (Bronco Splash doesn't, per design — every swim eventually finishes, so only the time matters). Neither has an Archive entry or a streak, since there's no "edition" or schedule to either of them — it's always the same game.

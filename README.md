@@ -63,6 +63,7 @@ The footer's version number (`SITE_VERSION` in `config.js`) is a manual label fo
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
 ### Unreleased
+- Added a "Brophy Home" link (to brophyprep.org) in the top nav bar, right after "Roundup Home," on every page.
 
 
 ### Version 1.3.2 — August 2026

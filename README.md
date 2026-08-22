@@ -64,13 +64,13 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 ### Unreleased
 
 
-### Version 1.3-pre.1 — August 2026
+### Version 1.3-pre.2 — August 2026
 - Added **Bronco Blitz (BETA)**, a third persistent game: a 30-second A/B/C/D trivia speed round drawing from the same shared `PERSISTENT_GAME_QUESTIONS` pool as Bronco Dash and Bronco Splash. Each correct answer is worth a base 100 points, multiplied by a streak bonus that grows with consecutive correct answers (capped at 3x), plus a speed bonus that tapers off the longer you take to answer. A wrong answer breaks the streak and locks out answering for 3 seconds — the clock keeps running through the lockout, so it costs real time.
 - Generalized the Stats page's `STAT_GAMES` model with `trackPoints` and `trackBestScore` options (alongside the existing `trackWins`/`trackBestTime`) for games that track points — Bronco Blitz is the first to use them, showing its lifetime point total (every round played adds to it) and its single-round high score as two separate stats, since they answer different questions ("how much have I played" vs. "what's my best round").
 - Homepage now splits the game cards into two grids with a matching labeled divider above each — "Today & This Week" (Mini Crossword, Weekly Crossword, Guess the Teacher, and the "More Games Coming Soon" placeholder) and "Persistent Games — Always Available" (Bronco Dash, Bronco Splash, Bronco Blitz) — so it's unambiguous which games change day-to-day and which don't. Controlled by a new `category` field on each `GAMES` entry in `config.js`.
 - Special Edition's homepage card, when nothing is currently live, now sits at the bottom of the persistent games grid (right under Bronco Blitz) instead of the daily grid — it's neither a daily nor a scheduled-recurring slot in the way Mini/Weekly/Guess the Teacher are, so it reads better grouped with the other "check in any time" cards.
 
-### Version 1.3 prerelease — August 2026
+### Version 1.3-pre.1 — August 2026
 - Added the site's first **persistent games** — Bronco Dash and Bronco Splash — built from scratch (no embed), each running the same game every time from a large question pool answered in a random order. Both track a fastest time; Bronco Dash also tracks a win count (Bronco Splash doesn't, per design — every swim eventually finishes, so only the time matters). Neither has an Archive entry or a streak, since there's no "edition" or schedule to either of them — it's always the same game.
 - **Bronco Dash**: the player stays centered on screen and starts exactly on the start line. Rather than the player's own position ever slipping backward, a separate red pace line steadily advances on its own — a correct answer pushes the player ahead and widens the gap, a wrong answer costs a 3-second wait while the line keeps closing in. If it catches the player, that's a loss (question input stops, a "Try Again" screen shows) — previously there was no way to actually lose.
 - **Bronco Splash**: air depletes noticeably faster and the lap is a good deal longer, so pacing your answers actually matters instead of coasting to the end.

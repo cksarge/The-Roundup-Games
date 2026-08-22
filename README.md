@@ -64,6 +64,11 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 ### Unreleased
 
 
+### Version 1.3 — August 2026
+- Replaced the persistent games' generic trivia pool with a set of ~70 Brophy-specific questions covering the school's history and founding, campus and traditions, academics, general facts, and athletics (including specific championship years) — so Bronco Dash, Bronco Splash, and Bronco Blitz now quiz players on Brophy itself rather than general trivia.
+- All three persistent games (Bronco Dash, Bronco Splash, Bronco Blitz) can now be answered from the keyboard — press 1/2/3/4 or A/B/C/D to pick a choice, no mouse/tap required. Dash and Splash's answer buttons now show an A–D letter too (previously only Bronco Blitz did), so it's clear which key maps to which choice.
+- Fixed the persistent games' answer choices always appearing in the same on-screen order (correct answer always in the same A/B/C/D slot every time a given question came up) — each question's choices are now shuffled fresh every time it's shown, so the correct answer's position is random.
+
 ### Version 1.3-pre.2 — August 2026
 - Added **Bronco Blitz (BETA)**, a third persistent game: a 30-second A/B/C/D trivia speed round drawing from the same shared `PERSISTENT_GAME_QUESTIONS` pool as Bronco Dash and Bronco Splash. Each correct answer is worth a base 100 points, multiplied by a streak bonus that grows with consecutive correct answers (capped at 3x), plus a speed bonus that tapers off the longer you take to answer. A wrong answer breaks the streak and locks out answering for 3 seconds — the clock keeps running through the lockout, so it costs real time.
 - Generalized the Stats page's `STAT_GAMES` model with `trackPoints` and `trackBestScore` options (alongside the existing `trackWins`/`trackBestTime`) for games that track points — Bronco Blitz is the first to use them, showing its lifetime point total (every round played adds to it) and its single-round high score as two separate stats, since they answer different questions ("how much have I played" vs. "what's my best round").

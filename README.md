@@ -5,7 +5,7 @@ Games and puzzles from **The Roundup**, the student-led newspaper of Brophy Coll
 Live features:
 
 - **Weekly Crossword** — a bigger, themed puzzle posted every Monday
-- **Mini Crossword** — a fresh grid every school day
+- **Daily Crossword** — a fresh grid every school day
 - **Guess the Teacher** — three clues (hardest to easiest), three guesses, name the faculty member
 - **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
 - **Bronco Dash** — a persistent (always-available, never-changing) side-scrolling track game. Answer trivia to sprint ahead; ticks drain on their own over time, so speed matters
@@ -33,7 +33,7 @@ See the comments at the top of `config.js` for the full breakdown of `DAILY_PUZZ
 
 ```
 index.html               Homepage — game cards, pulled from GAMES in config.js
-mini-crossword.html       Today's Mini Crossword
+mini-crossword.html       Today's Daily Crossword
 weekly-crossword.html     This week's Weekly Crossword
 guess-the-teacher.html    Today's Guess the Teacher
 special-edition.html      The current Special Edition game (or a "nothing today" message)
@@ -51,7 +51,7 @@ logo.png / favicon.png / apple-touch-icon.png   Site branding
 ## Editing content
 
 1. Open `config.js`.
-2. Add a new entry to `DAILY_PUZZLES` (for a Mini Crossword / Guess the Teacher day) or `WEEKLY_PUZZLES` (for a Weekly Crossword), following the example templates in the comments.
+2. Add a new entry to `DAILY_PUZZLES` (for a Daily Crossword / Guess the Teacher day) or `WEEKLY_PUZZLES` (for a Weekly Crossword), following the example templates in the comments.
 3. Save. That's it — no rebuild, no redeploy step beyond pushing the file.
 
 The footer's version number (`SITE_VERSION` in `config.js`) is a manual label for tracking releases — it's bumped deliberately, not automatically.
@@ -63,7 +63,12 @@ The footer's version number (`SITE_VERSION` in `config.js`) is a manual label fo
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
 ### Unreleased
+
+
+### Version 1.3.2 — August 2026
 - Fixed Special Edition wins not being credited for Word Flower–type embeds (`embedUrl` path `/pmm/wordf`). The win-detection listener only recognized AmuseLabs' `PUZZLE_COMPLETE` message, but Word Flower puzzles never send one — they only send `PUZZLE_PROGRESS` as each word is found, with no separate "done" event. It now also treats a Word Flower puzzle as won once `wordsFound` reaches `totalWords`. Crossword-type embeds (Mini/Weekly Crossword, Special Edition crosswords) are unaffected — they still use `PUZZLE_COMPLETE` as before.
+- Renamed **Mini Crossword** to **Daily Crossword** everywhere it's displayed (nav, homepage card, page title/headings, Archive, Stats, README) — the filename (`mini-crossword.html`) and internal identifiers are unchanged, so existing win/streak history keeps working.
+- The date shown in the nav bar now includes the day of the week, e.g. "Saturday, August 22, 2026" instead of just "August 22, 2026".
 
 
 ### Version 1.3.1 — August 2026
@@ -78,7 +83,7 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 ### Version 1.3-pre.2 — August 2026
 - Added **Bronco Blitz (BETA)**, a third persistent game: a 30-second A/B/C/D trivia speed round drawing from the same shared `PERSISTENT_GAME_QUESTIONS` pool as Bronco Dash and Bronco Splash. Each correct answer is worth a base 100 points, multiplied by a streak bonus that grows with consecutive correct answers (capped at 3x), plus a speed bonus that tapers off the longer you take to answer. A wrong answer breaks the streak and locks out answering for 3 seconds — the clock keeps running through the lockout, so it costs real time.
 - Generalized the Stats page's `STAT_GAMES` model with `trackPoints` and `trackBestScore` options (alongside the existing `trackWins`/`trackBestTime`) for games that track points — Bronco Blitz is the first to use them, showing its lifetime point total (every round played adds to it) and its single-round high score as two separate stats, since they answer different questions ("how much have I played" vs. "what's my best round").
-- Homepage now splits the game cards into two grids with a matching labeled divider above each — "Today & This Week" (Mini Crossword, Weekly Crossword, Guess the Teacher, and the "More Games Coming Soon" placeholder) and "Persistent Games — Always Available" (Bronco Dash, Bronco Splash, Bronco Blitz) — so it's unambiguous which games change day-to-day and which don't. Controlled by a new `category` field on each `GAMES` entry in `config.js`.
+- Homepage now splits the game cards into two grids with a matching labeled divider above each — "Today & This Week" (Daily Crossword, Weekly Crossword, Guess the Teacher, and the "More Games Coming Soon" placeholder) and "Persistent Games — Always Available" (Bronco Dash, Bronco Splash, Bronco Blitz) — so it's unambiguous which games change day-to-day and which don't. Controlled by a new `category` field on each `GAMES` entry in `config.js`.
 - Special Edition's homepage card, when nothing is currently live, now sits at the bottom of the persistent games grid (right under Bronco Blitz) instead of the daily grid — it's neither a daily nor a scheduled-recurring slot in the way Mini/Weekly/Guess the Teacher are, so it reads better grouped with the other "check in any time" cards.
 
 ### Version 1.3-pre.1 — August 2026
@@ -108,15 +113,15 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 
 ### Version 1.2.1 — August 2026
 - Fixed the Archive: clicking "View" now expands that edition's content directly below the row you clicked, instead of always in one shared panel below the entire list.
-- Added win streaks for Mini Crossword, Weekly Crossword, and Guess the Teacher (not Special Edition, since it's a one-off rather than a recurring schedule), shown on the Stats page. A streak counts consecutive published editions won, and doesn't break just because today's/this week's hasn't been played yet — only an actually-missed edition breaks it.
+- Added win streaks for Daily Crossword, Weekly Crossword, and Guess the Teacher (not Special Edition, since it's a one-off rather than a recurring schedule), shown on the Stats page. A streak counts consecutive published editions won, and doesn't break just because today's/this week's hasn't been played yet — only an actually-missed edition breaks it.
 - Added a way to recount wins from before the Stats page existed: Guess the Teacher wins are recovered automatically (that game already stored win/lose state locally), and each crossword-type game on the Stats page now has an "Add a past win" control to manually credit an edition you'd already solved, since there's no reliable way to detect that automatically for embedded crosswords.
 
 ### Version 1.2 — August 2026
 - Added a **Stats** page (`stats.html`) showing how many times you've won each game, stored per-browser in `localStorage` (not on a server — clearing your browser's site data resets it).
-- Crossword-type embeds (Mini Crossword, Weekly Crossword, Special Edition) report puzzle completions to the parent page via the embed's own `postMessage` API; wins there and in Guess the Teacher both feed the same stats, deduplicated so replaying an already-won puzzle never inflates the count.
+- Crossword-type embeds (Daily Crossword, Weekly Crossword, Special Edition) report puzzle completions to the parent page via the embed's own `postMessage` API; wins there and in Guess the Teacher both feed the same stats, deduplicated so replaying an already-won puzzle never inflates the count.
 
 ### Version 1.1.1 — August 2026
-- Grouped Mini Crossword, Weekly Crossword, Guess the Teacher, and Special Edition into a "Games" dropdown in the nav bar (hover to reveal — the trigger itself doesn't navigate anywhere), so the top nav stays short as more games get added.
+- Grouped Daily Crossword, Weekly Crossword, Guess the Teacher, and Special Edition into a "Games" dropdown in the nav bar (hover to reveal — the trigger itself doesn't navigate anywhere), so the top nav stays short as more games get added.
 - The Special Edition page now shows a "No Special Edition Today" card instead of just hiding the panel when nothing's live.
 
 ### Version 1.1 — August 2026
@@ -124,7 +129,7 @@ Newest at the top. Add an entry here whenever a change is significant enough to 
 - Special Edition entries include a hand-typed `date` label (same pattern as the other games), so the display text isn't limited to the raw start/end dates.
 
 ### Version 1.0 — August 2026
-- Initial launch: Weekly Crossword, Mini Crossword, Guess the Teacher, and Archive
+- Initial launch: Weekly Crossword, Daily Crossword, Guess the Teacher, and Archive
 - Config-driven publishing system (`config.js`) with automatic past/present/future resolution
 
 

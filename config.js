@@ -8,7 +8,7 @@
 
    HOW THIS WORKS NOW
    -----------------------------------------------------------------
-   Every daily puzzle (Mini Crossword + Guess the Teacher) lives in
+   Every daily puzzle (Daily Crossword + Guess the Teacher) lives in
    ONE list: DAILY_PUZZLES. Every Weekly Crossword lives in ONE list:
    WEEKLY_PUZZLES. Past, present, and future puzzles all sit in the
    same list, in any order — there's no more manually cutting
@@ -56,7 +56,7 @@
 
    • TODAY_DATE — auto-generated from today's real date, shown in
      the header. No need to edit this.
-   • DAILY_PUZZLES — every Mini Crossword + Guess the Teacher, past/
+   • DAILY_PUZZLES — every Daily Crossword + Guess the Teacher, past/
      present/future, in one list. See resolution rules above.
    • WEEKLY_PUZZLES — every Weekly Crossword, same idea.
    • SPECIAL_PUZZLES — every Special Edition game, one entry per
@@ -73,6 +73,7 @@
    Auto-generated from the visitor's own clock, so this always
    shows the real current date — no manual updating needed. */
 const TODAY_DATE = new Date().toLocaleDateString("en-US", {
+  weekday: "long",
   month: "long",
   day: "numeric",
   year: "numeric"
@@ -82,10 +83,10 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.3.1";
+const SITE_VERSION = "1.3.2";
 
 /* ----------------------------------------------------------------
-   DAILY PUZZLES — Mini Crossword + Guess the Teacher
+   DAILY PUZZLES — Daily Crossword + Guess the Teacher
    ----------------------------------------------------------------
    One object per day, any order, past/present/future all mixed
    together — it's sorted out automatically (see the big note up
@@ -519,7 +520,7 @@ const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
 const GAMES = [
   {
     id: "mini-crossword",
-    title: "Mini Crossword",
+    title: "Daily Crossword",
     blurb: "A fresh grid every school day — quotes, campus lingo, and the occasional Latin motto.",
     date: TODAY.date,
     difficulty: TODAY.crossword.difficulty,
@@ -832,7 +833,7 @@ function escapeHtml(str){
    recordBestScore), shown as two separate stats rather than one. */
 const STATS_STORAGE_KEY = "roundup:stats";
 const STAT_GAMES = [
-  { id: "miniCrossword", label: "Mini Crossword", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "miniCrossword", label: "Daily Crossword", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
@@ -1277,7 +1278,7 @@ function renderMiniCrosswordArchiveDetail(entry, detailEl){
   detailEl.innerHTML = `
     <div class="panel">
       <div class="panel__head">
-        <h2>Mini Crossword</h2>
+        <h2>Daily Crossword</h2>
         <span class="panel__date">${withDifficulty(entry.date, entry.crossword && entry.crossword.difficulty)}</span>
       </div>
       <div class="panel__body">
@@ -1297,7 +1298,7 @@ function renderMiniCrosswordArchiveDetail(entry, detailEl){
   if (!entry.crossword || !entry.crossword.embedUrl || entry.crossword.embedUrl.includes("REPLACE")) {
     wrap.innerHTML = `<div class="crossword-fallback">No crossword embed URL was saved for this edition.</div>`;
   } else {
-    wrap.innerHTML = `<iframe src="${entry.crossword.embedUrl}" title="Mini Crossword — ${entry.date}" loading="lazy"></iframe>`;
+    wrap.innerHTML = `<iframe src="${entry.crossword.embedUrl}" title="Daily Crossword — ${entry.date}" loading="lazy"></iframe>`;
   }
 
   mountTeacherGame(document.getElementById("archiveTeacherMount"), entry, `archive::${entry.isoDate}`, entry.isoDate, false);

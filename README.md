@@ -5,6 +5,7 @@ Games and puzzles from **The Roundup**, the student-led newspaper of Brophy Coll
 Live features:
 
 - **Weekly Crossword** — a bigger, themed puzzle posted every Monday
+- **Weekly Word Search** — a themed word search posted every Monday, a fully separate game from Weekly Crossword with its own difficulty
 - **Daily Crossword** — a fresh grid every school day
 - **Guess the Teacher** — three clues (hardest to easiest), three guesses, name the faculty member
 - **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
@@ -25,6 +26,8 @@ This means you can:
 - **Fix a past puzzle** by editing its entry directly, no hunting through a separate archive file.
 - **Add embed links** for crosswords (`crossword.embedUrl`) and they show up automatically wherever that entry is displayed — today's page, the homepage card, or the archive.
 
+Weekly Crossword and Weekly Word Search share one list (`WEEKLY_PUZZLES`) and one weekly schedule — same idea as DAILY_PUZZLES bundling Daily Crossword + Guess the Teacher into one entry per day. Each week's entry has a `crossword` sub-object and a `wordSearch` sub-object, and the two stay fully separate games otherwise: their own difficulty, own embed, own Archive/Stats entry each. Both also support an optional `theme` field (`crossword.theme` / `wordSearch.theme`, independent of each other): unlike Special Edition, whose theme is the whole point of its prominent homepage banner, this one is deliberately low-key — it's never shown on the homepage card, only as a small line on that game's own page (and its Archive detail).
+
 Bronco Dash, Bronco Splash, and Bronco Blitz work differently — they're **persistent** games with no date logic at all (same game every time). All three draw from one shared question pool (`PERSISTENT_GAME_QUESTIONS` in `config.js`) in a random order every playthrough — add a question once and it's in the mix for every persistent game, current or future, no dates involved.
 
 See the comments at the top of `config.js` for the full breakdown of `DAILY_PUZZLES`, `WEEKLY_PUZZLES`, `PERSISTENT_GAME_QUESTIONS`, and `GAMES`.
@@ -35,6 +38,7 @@ See the comments at the top of `config.js` for the full breakdown of `DAILY_PUZZ
 index.html               Homepage — game cards, pulled from GAMES in config.js
 mini-crossword.html       Today's Daily Crossword
 weekly-crossword.html     This week's Weekly Crossword
+weekly-word-search.html  This week's Weekly Word Search
 guess-the-teacher.html    Today's Guess the Teacher
 special-edition.html      The current Special Edition game (or a "nothing today" message)
 bronco-dash.html          Bronco Dash (persistent track game)
@@ -51,7 +55,7 @@ logo.png / favicon.png / apple-touch-icon.png   Site branding
 ## Editing content
 
 1. Open `config.js`.
-2. Add a new entry to `DAILY_PUZZLES` (for a Daily Crossword / Guess the Teacher day) or `WEEKLY_PUZZLES` (for a Weekly Crossword), following the example templates in the comments.
+2. Add a new entry to `DAILY_PUZZLES` (for a Daily Crossword / Guess the Teacher day) or `WEEKLY_PUZZLES` (for a Weekly Crossword / Weekly Word Search week), following the example templates in the comments.
 3. Save. That's it — no rebuild, no redeploy step beyond pushing the file.
 
 The footer's version number (`SITE_VERSION` in `config.js`) is a manual label for tracking releases — it's bumped deliberately, not automatically.
@@ -63,8 +67,12 @@ The footer's version number (`SITE_VERSION` in `config.js`) is a manual label fo
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
 ### Unreleased
-- Added a "Brophy Home" link (to brophyprep.org) in the top nav bar, right after "Roundup Home," on every page.
 
+
+### Version 1.4 — August 2026
+- Added **Weekly Word Search** (`weekly-word-search.html`), a new weekly game sharing `WEEKLY_PUZZLES`' schedule with Weekly Crossword — each week's entry now has a `crossword` sub-object and a `wordSearch` sub-object (same pattern as `DAILY_PUZZLES` bundling Daily Crossword + Guess the Teacher), each with its own difficulty, own embed, own Archive section, own Stats streak. Also added an optional `theme` field to both (`crossword.theme` / `wordSearch.theme`, set independently): unlike Special Edition, where the theme is the whole point of its prominent homepage banner, this one is intentionally low-key — never shown on the homepage card, only as a small line on that game's own page (and its Archive detail).
+- Hardened `GAMES`/`initPuzzleCompletionListener` against a `WEEKLY_PUZZLES`/`DAILY_PUZZLES` entry that only fills in one of its two sub-objects for a given day/week (e.g. a week with a crossword but no word search yet) — previously this could throw and break the entire site (the homepage card list reads both unconditionally, on every page). Now it degrades gracefully to "No ... embed URL has been set for this edition yet." on just that game.
+- Added a "Brophy Home" link (to brophyprep.org) in the top nav bar, right after "Roundup Home," on every page.
 
 ### Version 1.3.2 — August 2026
 - Fixed Special Edition wins not being credited for Word Flower–type embeds (`embedUrl` path `/pmm/wordf`). The win-detection listener only recognized AmuseLabs' `PUZZLE_COMPLETE` message, but Word Flower puzzles never send one — they only send `PUZZLE_PROGRESS` as each word is found, with no separate "done" event. It now also treats a Word Flower puzzle as won once `wordsFound` reaches `totalWords`. Crossword-type embeds (Mini/Weekly Crossword, Special Edition crosswords) are unaffected — they still use `PUZZLE_COMPLETE` as before.

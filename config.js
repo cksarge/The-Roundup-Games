@@ -2,9 +2,10 @@
    THE ROUNDUP GAMES — CONFIG
    ----------------------------------------------------------------
    This file is shared by every page (index.html, mini-crossword.html,
-   weekly-crossword.html, guess-the-teacher.html, special-edition.html,
-   bronco-dash.html, bronco-splash.html, bronco-blitz.html, archive.html)
-   — so you only ever edit game content in ONE place.
+   weekly-crossword.html, weekly-word-search.html, guess-the-teacher.html,
+   special-edition.html, bronco-dash.html, bronco-splash.html,
+   bronco-blitz.html, archive.html) — so you only ever edit game content
+   in ONE place.
 
    HOW THIS WORKS NOW
    -----------------------------------------------------------------
@@ -58,7 +59,10 @@
      the header. No need to edit this.
    • DAILY_PUZZLES — every Daily Crossword + Guess the Teacher, past/
      present/future, in one list. See resolution rules above.
-   • WEEKLY_PUZZLES — every Weekly Crossword, same idea.
+   • WEEKLY_PUZZLES — every Weekly Crossword + Weekly Word Search,
+     same idea again — one shared weekly schedule, but the two games
+     stay fully separate (own difficulty, own theme, own archive,
+     own streak each).
    • SPECIAL_PUZZLES — every Special Edition game, one entry per
      occasion, each with its own start/end date. See its own section
      below for details.
@@ -83,7 +87,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.3.2";
+const SITE_VERSION = "1.4";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Daily Crossword + Guess the Teacher
@@ -126,7 +130,24 @@ const SITE_VERSION = "1.3.2";
 */
 
 const DAILY_PUZZLES = [
-    {
+  {
+    isoDate: "2026-08-24",
+    date: "August 24, 2026",
+    crossword: {
+      difficulty: "2/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug24&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "3/5",
+      answer: "Mr. Barton",
+      clues: [
+        "This teacher went to Brophy as a student not too long ago and was part of the Alumni Service Corps.",
+        "This teacher is in the religious studies department.",
+        "One of the classes he teaches is Freshman Scripture."
+      ]
+    }
+  },
+  {
     isoDate: "2026-08-21",
     date: "August 21, 2026",
     crossword: {
@@ -137,8 +158,8 @@ const DAILY_PUZZLES = [
       difficulty: "2/5",
       answer: "Sr. Leyba",
       clues: [
-        "This teacher is of Native American ancestry.",
         "This teacher teaches a language class.",
+        "This teacher loves making kids now they are a star.",
         "He teaches in Keating."
       ]
     }
@@ -185,11 +206,38 @@ const DAILY_PUZZLES = [
 ];
 
 /* ----------------------------------------------------------------
-   WEEKLY PUZZLES — Weekly Crossword
+   WEEKLY PUZZLES — Weekly Crossword + Weekly Word Search
    ----------------------------------------------------------------
-   Same idea as DAILY_PUZZLES above: one object per week, any
-   order, past/present/future all mixed together. isoDate should
-   be the Monday that week's puzzle goes live.
+   Same idea as DAILY_PUZZLES above: one object per week, any order,
+   past/present/future all mixed together. isoDate should be the
+   Monday that week's puzzles go live. Each entry:
+
+     isoDate  — "yyyy-mm-dd", same rules as DAILY_PUZZLES' isoDate.
+     date     — the display label shown to visitors, e.g.
+                "Week of August 17, 2026". Typed by hand, doesn't
+                have to match isoDate's format.
+     crossword.difficulty / .theme / .embedUrl
+     wordSearch.difficulty / .theme / .embedUrl
+
+   Weekly Crossword and Weekly Word Search are two fully separate
+   games sharing one weekly schedule — own difficulty, own theme,
+   own embed, own Archive/Stats entry each. `theme` is optional
+   (leave "" to skip it) on either one, independently: unlike Special
+   Edition's theme, which is the whole point of its prominent
+   homepage banner, these are deliberately low-key — never shown on
+   the homepage card, only as a small line on that game's own page
+   (and its Archive detail).
+
+   If only one of the two is ready for a given week, the safest way
+   is to still include BOTH `crossword` and `wordSearch` on the
+   entry — just leave the one that isn't ready with empty strings
+   (`difficulty: ""`, `theme: ""`, `embedUrl: ""`), exactly like the
+   example below. That game's own page will then just show "No ...
+   embed URL has been set for this edition yet." Leaving a key out
+   entirely is also handled gracefully (same result), but sticking to
+   the empty-object pattern keeps every entry's shape consistent and
+   easy to scan. Same idea applies to DAILY_PUZZLES above, for
+   `crossword` and `guessTheTeacher`.
    ---------------------------------------------------------------- */
 
 /* EXAMPLE FOR WEEKLY PUZZLES
@@ -197,8 +245,14 @@ const DAILY_PUZZLES = [
   {
     isoDate: "",
     date: "",
-    difficulty: "",
     crossword: {
+      difficulty: "",
+      theme: "",
+      embedUrl: ""
+    },
+    wordSearch: {
+      difficulty: "",
+      theme: "",
       embedUrl: ""
     }
   },
@@ -209,9 +263,15 @@ const WEEKLY_PUZZLES = [
   {
     isoDate: "2026-08-17",
     date: "Week of August 17, 2026",
-    difficulty: "4/5",
     crossword: {
+      difficulty: "4/5",
+      theme: "General Knowledge",
       embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupweekaug17&set=carter"
+    },
+    wordSearch: {
+      difficulty: "3/5",
+      theme: "Building Names at Brophy",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/wordsearch?id=roundupsearchweekaug17&set=carter"
     }
   }
 
@@ -482,8 +542,8 @@ const FALLBACK_DAILY = {
 const FALLBACK_WEEKLY = {
   isoDate: null,
   date: "No puzzle published yet",
-  difficulty: null,
-  crossword: { embedUrl: "" }
+  crossword: { difficulty: null, theme: "", embedUrl: "" },
+  wordSearch: { difficulty: null, theme: "", embedUrl: "" }
 };
 
 const DAILY_RESOLVED = resolvePuzzleSet(DAILY_PUZZLES);
@@ -491,7 +551,7 @@ const TODAY = DAILY_RESOLVED.current || FALLBACK_DAILY;
 const ARCHIVE = DAILY_RESOLVED.archive;
 
 const WEEKLY_RESOLVED = resolvePuzzleSet(WEEKLY_PUZZLES);
-const WEEKLY_CROSSWORD = WEEKLY_RESOLVED.current || FALLBACK_WEEKLY;
+const THIS_WEEK = WEEKLY_RESOLVED.current || FALLBACK_WEEKLY;
 const WEEKLY_ARCHIVE = WEEKLY_RESOLVED.archive;
 
 const SPECIAL_RESOLVED = resolveSpecialPuzzle(SPECIAL_PUZZLES);
@@ -523,7 +583,7 @@ const GAMES = [
     title: "Daily Crossword",
     blurb: "A fresh grid every school day — quotes, campus lingo, and the occasional Latin motto.",
     date: TODAY.date,
-    difficulty: TODAY.crossword.difficulty,
+    difficulty: TODAY.crossword ? TODAY.crossword.difficulty : null,
     href: "mini-crossword.html",
     category: "daily"
   },
@@ -531,9 +591,18 @@ const GAMES = [
     id: "weekly-crossword",
     title: "Weekly Crossword",
     blurb: "A bigger, themed puzzle — posted every Monday.",
-    date: WEEKLY_CROSSWORD.date,
-    difficulty: WEEKLY_CROSSWORD.difficulty,
+    date: THIS_WEEK.date,
+    difficulty: THIS_WEEK.crossword ? THIS_WEEK.crossword.difficulty : null,
     href: "weekly-crossword.html",
+    category: "daily"
+  },
+  {
+    id: "weekly-word-search",
+    title: "Weekly Word Search",
+    blurb: "A themed word search — posted every Monday.",
+    date: THIS_WEEK.date,
+    difficulty: THIS_WEEK.wordSearch ? THIS_WEEK.wordSearch.difficulty : null,
+    href: "weekly-word-search.html",
     category: "daily"
   },
   {
@@ -650,6 +719,25 @@ function renderCrossword(mountId, dateId, data, dateLabel){
     return;
   }
   wrap.innerHTML = `<iframe src="${data.crossword.embedUrl}" title="Daily crossword — ${dateLabel || ""}" loading="lazy"></iframe>`;
+}
+
+/* ---------- word search embed ----------
+   Same shape as renderCrossword above, just for Weekly Word Search's
+   own `data.wordSearch.embedUrl` field instead of `data.crossword` —
+   kept as its own function (rather than a shared/parameterized one)
+   so each stays simple to read on its own. */
+function renderWordSearch(mountId, dateId, data, dateLabel){
+  const dateEl = document.getElementById(dateId);
+  if (dateEl) dateEl.textContent = dateLabel || "";
+  const wrap = document.getElementById(mountId);
+  if (!wrap) return;
+  if (data.isoDate) wrap.dataset.statsWinId = data.isoDate;
+  wrap.dataset.statsStreakEligible = "true"; // this always renders the CURRENT edition, never archive
+  if (!data.wordSearch || !data.wordSearch.embedUrl || data.wordSearch.embedUrl.includes("REPLACE")) {
+    wrap.innerHTML = `<div class="crossword-fallback">No word search embed URL has been set for this edition yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<iframe src="${data.wordSearch.embedUrl}" title="Weekly word search — ${dateLabel || ""}" loading="lazy"></iframe>`;
 }
 
 /* ---------- special edition embed ----------
@@ -835,6 +923,7 @@ const STATS_STORAGE_KEY = "roundup:stats";
 const STAT_GAMES = [
   { id: "miniCrossword", label: "Daily Crossword", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "weeklyWordSearch", label: "Weekly Word Search", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "broncoDash", label: "Bronco Dash (BETA)", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false },
@@ -958,7 +1047,10 @@ function getWinCount(category){
    date has actually arrived (no crediting the future) */
 function getPublishedEntries(category){
   const todayIso = getTodayIsoDate();
-  if (category === "weeklyCrossword") {
+  // weeklyCrossword and weeklyWordSearch both run off the same
+  // WEEKLY_PUZZLES schedule (they're two separate games, but always
+  // published together per week), so they share this branch.
+  if (category === "weeklyCrossword" || category === "weeklyWordSearch") {
     return [...WEEKLY_PUZZLES]
       .filter(e => e.isoDate <= todayIso)
       .sort((a, b) => (a.isoDate < b.isoDate ? -1 : 1))
@@ -1274,6 +1366,15 @@ function withDifficulty(dateLabel, difficulty){
   return dateLabel + (difficulty ? ` • Difficulty: ${difficulty}` : "");
 }
 
+/* Small optional "Theme: X" line for Weekly Crossword / Weekly Word
+   Search — shown only on that game's own page (live or Archive
+   detail), never on the homepage card, unlike Special Edition where
+   the theme IS the homepage banner. Returns "" (renders nothing)
+   when no theme is set for that week. */
+function themeLineHtml(theme){
+  return theme ? `<p class="hero__theme">Theme: <strong>${escapeHtml(theme)}</strong></p>` : "";
+}
+
 function renderMiniCrosswordArchiveDetail(entry, detailEl){
   detailEl.innerHTML = `
     <div class="panel">
@@ -1309,9 +1410,10 @@ function renderWeeklyCrosswordArchiveDetail(entry, detailEl){
     <div class="panel">
       <div class="panel__head">
         <h2>Weekly Crossword</h2>
-        <span class="panel__date">${withDifficulty(entry.date, entry.difficulty)}</span>
+        <span class="panel__date">${withDifficulty(entry.date, entry.crossword && entry.crossword.difficulty)}</span>
       </div>
       <div class="panel__body">
+        ${themeLineHtml(entry.crossword && entry.crossword.theme)}
         <div class="crossword-frame-wrap" id="weeklyArchiveCrosswordWrap" data-stats-category="weeklyCrossword" data-stats-win-id="${entry.isoDate}"></div>
       </div>
     </div>
@@ -1325,6 +1427,28 @@ function renderWeeklyCrosswordArchiveDetail(entry, detailEl){
   }
 }
 
+function renderWeeklyWordSearchArchiveDetail(entry, detailEl){
+  detailEl.innerHTML = `
+    <div class="panel">
+      <div class="panel__head">
+        <h2>Weekly Word Search</h2>
+        <span class="panel__date">${withDifficulty(entry.date, entry.wordSearch && entry.wordSearch.difficulty)}</span>
+      </div>
+      <div class="panel__body">
+        ${themeLineHtml(entry.wordSearch && entry.wordSearch.theme)}
+        <div class="crossword-frame-wrap" id="weeklyWordSearchArchiveWrap" data-stats-category="weeklyWordSearch" data-stats-win-id="${entry.isoDate}"></div>
+      </div>
+    </div>
+  `;
+
+  const wrap = document.getElementById("weeklyWordSearchArchiveWrap");
+  if (!entry.wordSearch || !entry.wordSearch.embedUrl || entry.wordSearch.embedUrl.includes("REPLACE")) {
+    wrap.innerHTML = `<div class="crossword-fallback">No word search embed URL was saved for this edition.</div>`;
+  } else {
+    wrap.innerHTML = `<iframe src="${entry.wordSearch.embedUrl}" title="Weekly Word Search — ${entry.date}" loading="lazy"></iframe>`;
+  }
+}
+
 function renderArchive(){
   renderArchiveSection(
     "archiveList", ARCHIVE, renderMiniCrosswordArchiveDetail,
@@ -1335,6 +1459,13 @@ function renderArchive(){
 function renderWeeklyArchive(){
   renderArchiveSection(
     "weeklyArchiveList", WEEKLY_ARCHIVE, renderWeeklyCrosswordArchiveDetail,
+    entry => entry.date
+  );
+}
+
+function renderWeeklyWordSearchArchive(){
+  renderArchiveSection(
+    "weeklyWordSearchArchiveList", WEEKLY_ARCHIVE, renderWeeklyWordSearchArchiveDetail,
     entry => entry.date
   );
 }

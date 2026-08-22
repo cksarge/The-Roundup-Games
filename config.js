@@ -3,7 +3,8 @@
    ----------------------------------------------------------------
    This file is shared by every page (index.html, mini-crossword.html,
    weekly-crossword.html, guess-the-teacher.html, special-edition.html,
-   archive.html) — so you only ever edit game content in ONE place.
+   bronco-dash.html, bronco-splash.html, archive.html) — so you only
+   ever edit game content in ONE place.
 
    HOW THIS WORKS NOW
    -----------------------------------------------------------------
@@ -45,6 +46,14 @@
    To fix a mistake in a past puzzle, just edit that entry directly
    in the list — no separate archive file to hunt through.
 
+   PERSISTENT_GAME_QUESTIONS works differently from everything above
+   — it feeds the "persistent" games (Bronco Dash, Bronco Splash, and
+   any added later): there's no date logic at all, no current/archive
+   split. It's the same game every time, just answered from a large
+   question pool in a random order each playthrough. All persistent
+   games share this ONE pool — see its own section below for the
+   entry format.
+
    • TODAY_DATE — auto-generated from today's real date, shown in
      the header. No need to edit this.
    • DAILY_PUZZLES — every Mini Crossword + Guess the Teacher, past/
@@ -53,6 +62,8 @@
    • SPECIAL_PUZZLES — every Special Edition game, one entry per
      occasion, each with its own start/end date. See its own section
      below for details.
+   • PERSISTENT_GAME_QUESTIONS — the shared question pool for every
+     persistent game. See its own section below.
    • GAMES — controls the cards on the homepage.
    • SITE_VERSION — shown in the footer. Bump it whenever you want.
    ================================================================ */
@@ -71,7 +82,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.2.2";
+const SITE_VERSION = "1.3 prerelease";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -269,6 +280,62 @@ const SPECIAL_PUZZLES = [
   }
 ];
 
+/* ----------------------------------------------------------------
+   PERSISTENT GAMES — Bronco Dash, Bronco Splash, and any future ones
+   ----------------------------------------------------------------
+   Unlike everything above, these games have no date logic at all —
+   no isoDate, no current/archive split. It's the same game every
+   time; each playthrough just draws from a large pool of questions
+   in a fresh random order (the pool reshuffles and keeps going if a
+   run somehow outlasts it, so it never runs dry).
+
+   One shared pool (PERSISTENT_GAME_QUESTIONS) feeds every persistent
+   game — Bronco Dash, Bronco Splash, and any added later — rather
+   than each game keeping its own separate list. Add a question once
+   here and it's in the mix for all of them; each game still shuffles
+   its own independent run order, they just draw from the same well.
+
+   Each entry:
+     question     — the question text.
+     choices      — exactly 4 answer options, in the order they'll
+                    be shown as buttons.
+     correctIndex — which entry in `choices` (0-3) is correct.
+
+   Add as many as you want, in any order — there's no such thing as
+   a "used up" question, so a bigger pool just means more variety.
+   ---------------------------------------------------------------- */
+
+/* EXAMPLE FOR PERSISTENT GAME QUESTIONS
+
+  {
+    question: "",
+    choices: ["", "", "", ""],
+    correctIndex: 0
+  },
+
+*/
+
+const PERSISTENT_GAME_QUESTIONS = [
+  { question: "What planet is known as the Red Planet?", choices: ["Venus", "Mars", "Jupiter", "Saturn"], correctIndex: 1 },
+  { question: "How many continents are there?", choices: ["5", "6", "7", "8"], correctIndex: 2 },
+  { question: "What is the capital of Arizona?", choices: ["Tucson", "Flagstaff", "Mesa", "Phoenix"], correctIndex: 3 },
+  { question: "Which ocean is the largest?", choices: ["Atlantic", "Indian", "Pacific", "Arctic"], correctIndex: 2 },
+  { question: "How many players are on a soccer team on the field?", choices: ["9", "10", "11", "12"], correctIndex: 2 },
+  { question: "What gas do plants absorb from the air?", choices: ["Oxygen", "Carbon dioxide", "Nitrogen", "Hydrogen"], correctIndex: 1 },
+  { question: "What is the fastest land animal?", choices: ["Lion", "Cheetah", "Horse", "Greyhound"], correctIndex: 1 },
+  { question: "How many minutes are in a full day?", choices: ["1,440", "1,000", "2,400", "720"], correctIndex: 0 },
+  { question: "What is H2O more commonly known as?", choices: ["Salt", "Water", "Sugar", "Air"], correctIndex: 1 },
+  { question: "How many legs does a spider have?", choices: ["6", "8", "10", "12"], correctIndex: 1 },
+  { question: "What is the largest organ in the human body?", choices: ["Heart", "Liver", "Skin", "Brain"], correctIndex: 2 },
+  { question: "Which country is home to the kangaroo?", choices: ["Brazil", "South Africa", "Australia", "India"], correctIndex: 2 },
+  { question: "What do you call a baby dog?", choices: ["Kit", "Cub", "Puppy", "Foal"], correctIndex: 2 },
+  { question: "How many strings does a standard guitar have?", choices: ["4", "5", "6", "7"], correctIndex: 2 },
+  { question: "What is the freezing point of water in Fahrenheit?", choices: ["0°", "32°", "100°", "212°"], correctIndex: 1 },
+  { question: "Which sport uses a shuttlecock?", choices: ["Tennis", "Badminton", "Squash", "Table tennis"], correctIndex: 1 }
+  // Add more here — see the example above. Ideally dozens+, since
+  // "really large" means a run rarely (or never) sees a repeat.
+];
+
 /* ================================================================
    RESOLUTION LOGIC — figures out present/past/future from the
    lists above using the visitor's own device clock. You shouldn't
@@ -400,6 +467,22 @@ const GAMES = [
     date: TODAY.date,
     difficulty: TODAY.guessTheTeacher ? TODAY.guessTheTeacher.difficulty : null,
     href: "guess-the-teacher.html"
+  },
+  {
+    id: "bronco-dash",
+    title: "Bronco Dash (BETA)",
+    blurb: "Race down the track, answering questions to sprint ahead — reach the finish line as fast as you can.",
+    date: "Always Available",
+    difficulty: null,
+    href: "bronco-dash.html"
+  },
+  {
+    id: "bronco-splash",
+    title: "Bronco Splash (BETA)",
+    blurb: "Swim a lap before your air runs out — answer questions to catch your breath and pick up speed.",
+    date: "Always Available",
+    difficulty: null,
+    href: "bronco-splash.html"
   },
   {
     id: "coming-soon",
@@ -614,26 +697,66 @@ function escapeHtml(str){
    — see initPuzzleCompletionListener and mountTeacherGame's callers.
 
    `streak` marks which categories get a streak at all — daily/weekly
-   games only, not Special Edition (it's a one-off, not a recurring
-   schedule, so "consecutive" doesn't mean anything for it). */
+   games only, not Special Edition or the persistent games (none of
+   them run on a recurring schedule, so "consecutive" doesn't mean
+   anything for them).
+
+   `trackWins` / `trackBestTime` control what actually shows up on
+   the Stats page for a category — most games track wins only, the
+   persistent games (Bronco Dash, Bronco Splash) also (or only) track
+   a fastest time, stored separately in stats.bestTimes. */
 const STATS_STORAGE_KEY = "roundup:stats";
 const STAT_GAMES = [
-  { id: "miniCrossword", label: "Mini Crossword", streak: true, streakUnit: "day" },
-  { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week" },
-  { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day" },
-  { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null }
+  { id: "miniCrossword", label: "Mini Crossword", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false },
+  { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false },
+  { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false },
+  { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false },
+  { id: "broncoDash", label: "Bronco Dash (BETA)", streak: false, streakUnit: null, trackWins: true, trackBestTime: true },
+  { id: "broncoSplash", label: "Bronco Splash (BETA)", streak: false, streakUnit: null, trackWins: false, trackBestTime: true }
 ];
 
 function loadStats(){
   const raw = loadGameState(STATS_STORAGE_KEY);
-  const stats = { streakWins: {} };
+  const stats = { streakWins: {}, bestTimes: {} };
   STAT_GAMES.forEach(game => {
     stats[game.id] = (raw && Array.isArray(raw[game.id])) ? raw[game.id] : [];
     if (game.streak) {
       stats.streakWins[game.id] = (raw && raw.streakWins && Array.isArray(raw.streakWins[game.id])) ? raw.streakWins[game.id] : [];
     }
+    if (game.trackBestTime) {
+      stats.bestTimes[game.id] = (raw && raw.bestTimes && typeof raw.bestTimes[game.id] === "number") ? raw.bestTimes[game.id] : null;
+    }
   });
   return stats;
+}
+
+/* Records a new time (in seconds) for a persistent game, keeping
+   only the fastest one ever seen. Returns true if this was a new
+   best (so the finish screen can say so), false otherwise. */
+function recordBestTime(category, seconds){
+  const game = STAT_GAMES.find(g => g.id === category);
+  if (!game || !game.trackBestTime || typeof seconds !== "number" || !isFinite(seconds)) return false;
+
+  const stats = loadStats();
+  const current = stats.bestTimes[category];
+  const isNewBest = current === null || seconds < current;
+  if (isNewBest) {
+    stats.bestTimes[category] = seconds;
+    saveGameState(STATS_STORAGE_KEY, stats);
+  }
+  return isNewBest;
+}
+
+function getBestTime(category){
+  return loadStats().bestTimes[category];
+}
+
+/* 83.4 -> "1:23.4" */
+function formatTime(seconds){
+  if (typeof seconds !== "number" || !isFinite(seconds)) return null;
+  const m = Math.floor(seconds / 60);
+  const s = (seconds % 60).toFixed(1);
+  return `${m}:${s.padStart(4, "0")}`;
 }
 
 function recordWin(category, winId, streakEligible){
@@ -1071,18 +1194,429 @@ function renderStatsPage(){
   if (!listEl) return;
 
   listEl.innerHTML = STAT_GAMES.map(game => {
-    const count = getWinCount(game.id);
+    const parts = [];
+
+    if (game.trackWins) {
+      const count = getWinCount(game.id);
+      parts.push(`${count} win${count === 1 ? "" : "s"}`);
+    }
+
     const streak = computeStreak(game.id);
+    if (streak !== null) {
+      parts.push(`${streak} ${game.streakUnit}${streak === 1 ? "" : "s"} streak`);
+    }
+
+    if (game.trackBestTime) {
+      const best = getBestTime(game.id);
+      parts.push(`Fastest: ${best === null ? "—" : formatTime(best)}`);
+    }
 
     return `
       <li class="stats-row">
         <div class="stats-row__top">
           <span class="stats-row__label">${game.label}</span>
-          <span class="stats-row__count">${count} win${count === 1 ? "" : "s"}${streak !== null ? ` · ${streak} ${game.streakUnit}${streak === 1 ? "" : "s"} streak` : ""}</span>
+          <span class="stats-row__count">${parts.join(" · ")}</span>
         </div>
       </li>
     `;
   }).join("");
+}
+
+/* ================================================================
+   PERSISTENT GAME ENGINE (Bronco Dash / Bronco Splash)
+   ----------------------------------------------------------------
+   Shared helpers used by both games below, since structurally
+   they're the same loop: a continuously-updating progress value,
+   a nonstop stream of multiple-choice questions, and a win check.
+   ================================================================ */
+
+function shuffleArray(arr){
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* Draws questions from `pool` in a random order with no immediate
+   repeats; reshuffles and keeps going once it runs out, so a run
+   can never actually exhaust the pool. */
+function createQuestionQueue(pool){
+  let queue = shuffleArray(pool);
+  let index = 0;
+  return function next(){
+    if (index >= queue.length) {
+      queue = shuffleArray(pool);
+      index = 0;
+    }
+    return queue[index++];
+  };
+}
+
+/* Renders one question into `${prefix}QuestionText` / `${prefix}Choices`
+   and wires up its 4 answer buttons. `onAnswer(wasCorrect)` fires once,
+   after briefly highlighting the chosen answer (and the correct one,
+   if the choice was wrong) so the player sees what they got. */
+function renderGameQuestion(prefix, question, onAnswer){
+  const textEl = document.getElementById(`${prefix}QuestionText`);
+  const choicesEl = document.getElementById(`${prefix}Choices`);
+  if (!textEl || !choicesEl) return;
+
+  textEl.textContent = question.question;
+  choicesEl.innerHTML = question.choices.map((choice, i) =>
+    `<button class="game-question__choice" type="button" data-choice-index="${i}">${escapeHtml(choice)}</button>`
+  ).join("");
+
+  choicesEl.querySelectorAll("[data-choice-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const buttons = choicesEl.querySelectorAll("[data-choice-index]");
+      buttons.forEach(b => { b.disabled = true; });
+
+      const correct = Number(btn.dataset.choiceIndex) === question.correctIndex;
+      btn.classList.add(correct ? "is-correct" : "is-wrong");
+      if (!correct) {
+        const correctBtn = choicesEl.querySelector(`[data-choice-index="${question.correctIndex}"]`);
+        if (correctBtn) correctBtn.classList.add("is-correct");
+      }
+      onAnswer(correct);
+    });
+  });
+}
+
+/* Positions one marker (start line, finish line, pace line, ...)
+   relative to the player, who stays fixed dead-center on screen the
+   whole game — the markers move instead, based on how far `current`
+   is from that marker's own fixed `referenceValue`. A marker whose
+   referenceValue equals `current` sits exactly on the player — e.g.
+   the finish marker reaches the player exactly at the win moment,
+   and (for Bronco Dash) the start marker sits exactly on the player
+   at the moment the game begins, since it shares the same starting
+   value rather than an arbitrary zero. */
+function updateGameMarker(elId, current, referenceValue, pxPerUnit){
+  const el = document.getElementById(elId);
+  if (el) el.style.transform = `translateX(${(referenceValue - current) * pxPerUnit}px)`;
+}
+
+function updateGameBar(elId, fraction){
+  const fill = document.getElementById(elId);
+  if (fill) fill.style.width = `${Math.max(0, Math.min(1, fraction)) * 100}%`;
+}
+
+function briefBoost(figureEl, drift){
+  if (figureEl) figureEl.classList.add("is-boost");
+  if (drift) drift.boost(1.8, 500);
+  setTimeout(() => {
+    if (figureEl) figureEl.classList.remove("is-boost");
+  }, 500);
+}
+
+/* Drives a decorative scroll layer's background-position-x every
+   frame instead of via a CSS animation, so its speed can ease up and
+   back down smoothly (a correct answer's "boost") with no jump — see
+   the comment on .game-scroll in styles.css for why that matters. */
+function createScrollDrift(scrollEl, initialBasePxPerSec){
+  const STEP_MS = 40;
+  let pos = 0;
+  let speed = initialBasePxPerSec;
+  let base = initialBasePxPerSec;
+  let boostSpeed = null; // non-null while a boost is overriding the base
+  let stepTimer = null;
+  let resetTimer = null;
+
+  function step(){
+    const dt = STEP_MS / 1000;
+    const target = boostSpeed !== null ? boostSpeed : base;
+    speed += (target - speed) * Math.min(1, dt * 5);
+    pos -= speed * dt;
+    if (scrollEl) scrollEl.style.backgroundPositionX = `${pos}px`;
+  }
+  stepTimer = setInterval(step, STEP_MS);
+
+  return {
+    /* lets the "resting" speed itself change over time — e.g. Bronco
+       Splash ties this to the swimmer's actual current speed, so the
+       water stops scrolling when the swimmer stops moving (out of
+       air) instead of drifting on regardless. */
+    setBase(newBase){ base = newBase; },
+    boost(multiplier, durationMs){
+      boostSpeed = initialBasePxPerSec * multiplier;
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => { boostSpeed = null; }, durationMs);
+    },
+    stop(){
+      clearInterval(stepTimer);
+      clearTimeout(resetTimer);
+    }
+  };
+}
+
+/* ---------- Bronco Dash ----------
+   The player's own tick never decreases — it only ever moves forward,
+   via correct answers. Falling behind isn't represented by the
+   player (or the start line) moving backward; instead a separate
+   "pace line" steadily advances on its own the whole game. Answer
+   quickly enough and you pull away from it; answer too slowly (or
+   wrong, which costs a 3s wait with no progress) and it closes the
+   gap. If it ever catches the player, that's a loss. */
+function initBroncoDash(){
+  const prefix = "dash";
+  const startPanel = document.getElementById(`${prefix}StartPanel`);
+  const startBtn = document.getElementById(`${prefix}StartBtn`);
+  const playAgainBtn = document.getElementById(`${prefix}PlayAgainBtn`);
+  const tryAgainBtn = document.getElementById(`${prefix}TryAgainBtn`);
+  const stage = document.getElementById(`${prefix}Stage`);
+  const questionPanel = document.getElementById(`${prefix}Question`);
+  const finishPanel = document.getElementById(`${prefix}FinishPanel`);
+  const losePanel = document.getElementById(`${prefix}LosePanel`);
+  const finishTimeEl = document.getElementById(`${prefix}FinishTime`);
+  const timerEl = document.getElementById(`${prefix}Timer`);
+  const waitEl = document.getElementById(`${prefix}WaitMsg`);
+  const figureEl = stage ? stage.querySelector(".stick-figure") : null;
+  const scrollEl = stage ? stage.querySelector(".game-scroll") : null;
+  if (!startBtn) return;
+
+  const START = 30, WIN = 60, PX_PER_TICK = 14;
+  const PACE_START_GAP = 8, PACE_PER_SEC = 1, STEP_MS = 100;
+  const BOOST_MIN = 3, BOOST_MAX = 5, WRONG_WAIT_MS = 3000;
+  const SCROLL_BASE_SPEED = 100;
+
+  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS);
+
+  let tick = START;
+  let pace = START - PACE_START_GAP;
+  let startTime = null;
+  let stepTimer = null;
+  let timerInterval = null;
+  let waitInterval = null;
+  let finished = false;
+  let drift = null;
+
+  function updateVisuals(){
+    updateGameMarker(`${prefix}StartMarker`, tick, START, PX_PER_TICK);
+    updateGameMarker(`${prefix}FinishMarker`, tick, WIN, PX_PER_TICK);
+    updateGameMarker(`${prefix}PaceMarker`, tick, pace, PX_PER_TICK);
+    updateGameBar(`${prefix}ProgressFill`, (tick - START) / (WIN - START));
+  }
+
+  function askQuestion(){
+    if (finished) return;
+    renderGameQuestion(prefix, nextQuestion(), handleAnswer);
+  }
+
+  function handleAnswer(correct){
+    if (finished) return;
+    if (correct) {
+      const boost = BOOST_MIN + Math.floor(Math.random() * (BOOST_MAX - BOOST_MIN + 1));
+      tick = Math.min(WIN, tick + boost);
+      updateVisuals();
+      briefBoost(figureEl, drift);
+      if (tick >= WIN) { finishGame(); return; }
+      setTimeout(askQuestion, 400);
+    } else {
+      if (figureEl) figureEl.classList.add("is-waiting");
+      let remaining = Math.round(WRONG_WAIT_MS / 1000);
+      if (waitEl) waitEl.textContent = `Wait ${remaining}s…`;
+      waitInterval = setInterval(() => {
+        if (finished) { clearInterval(waitInterval); return; }
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(waitInterval);
+          if (waitEl) waitEl.textContent = "";
+          if (figureEl) figureEl.classList.remove("is-waiting");
+          askQuestion();
+        } else if (waitEl) {
+          waitEl.textContent = `Wait ${remaining}s…`;
+        }
+      }, 1000);
+    }
+  }
+
+  function step(){
+    if (finished) return;
+    pace += PACE_PER_SEC * (STEP_MS / 1000);
+    updateVisuals();
+    if (pace >= tick) loseGame();
+  }
+
+  function updateTimerDisplay(){
+    if (timerEl && startTime !== null) timerEl.textContent = formatTime((Date.now() - startTime) / 1000);
+  }
+
+  function stopTimers(){
+    clearInterval(stepTimer);
+    clearInterval(timerInterval);
+    clearInterval(waitInterval);
+  }
+
+  function finishGame(){
+    finished = true;
+    stopTimers();
+    if (drift) drift.stop();
+    const elapsed = (Date.now() - startTime) / 1000;
+    recordWin("broncoDash", `${Date.now()}-${Math.random()}`);
+    const isNewBest = recordBestTime("broncoDash", elapsed);
+    if (questionPanel) questionPanel.hidden = true;
+    if (figureEl) figureEl.className = "stick-figure";
+    if (finishTimeEl) {
+      finishTimeEl.innerHTML = `Time: ${formatTime(elapsed)}` + (isNewBest ? ` <span class="is-new-best">— new best!</span>` : "");
+    }
+    if (finishPanel) finishPanel.hidden = false;
+  }
+
+  function loseGame(){
+    finished = true;
+    stopTimers();
+    if (drift) drift.stop();
+    if (questionPanel) questionPanel.hidden = true;
+    if (waitEl) waitEl.textContent = "";
+    if (figureEl) figureEl.className = "stick-figure is-waiting";
+    if (losePanel) losePanel.hidden = false;
+  }
+
+  function startGame(){
+    tick = START;
+    pace = START - PACE_START_GAP;
+    finished = false;
+    startTime = Date.now();
+    if (startPanel) startPanel.hidden = true;
+    if (finishPanel) finishPanel.hidden = true;
+    if (losePanel) losePanel.hidden = true;
+    if (stage) stage.hidden = false;
+    if (questionPanel) questionPanel.hidden = false;
+    if (waitEl) waitEl.textContent = "";
+    if (figureEl) figureEl.className = "stick-figure is-running";
+    updateVisuals();
+    if (drift) drift.stop();
+    drift = createScrollDrift(scrollEl, SCROLL_BASE_SPEED);
+    stepTimer = setInterval(step, STEP_MS);
+    timerInterval = setInterval(updateTimerDisplay, 100);
+    askQuestion();
+  }
+
+  startBtn.addEventListener("click", startGame);
+  if (playAgainBtn) playAgainBtn.addEventListener("click", startGame);
+  if (tryAgainBtn) tryAgainBtn.addEventListener("click", startGame);
+}
+
+/* ---------- Bronco Splash ---------- */
+function initBroncoSplash(){
+  const prefix = "splash";
+  const startPanel = document.getElementById(`${prefix}StartPanel`);
+  const startBtn = document.getElementById(`${prefix}StartBtn`);
+  const playAgainBtn = document.getElementById(`${prefix}PlayAgainBtn`);
+  const stage = document.getElementById(`${prefix}Stage`);
+  const questionPanel = document.getElementById(`${prefix}Question`);
+  const finishPanel = document.getElementById(`${prefix}FinishPanel`);
+  const finishTimeEl = document.getElementById(`${prefix}FinishTime`);
+  const timerEl = document.getElementById(`${prefix}Timer`);
+  const figureEl = stage ? stage.querySelector(".stick-figure") : null;
+  const scrollEl = stage ? stage.querySelector(".game-scroll") : null;
+  if (!startBtn) return;
+
+  const O2_START = 100, PROGRESS_WIN = 100, PX_PER_PERCENT = 22;
+  const O2_DEPLETE_PER_SEC = 12, O2_LOW_THRESHOLD = 20;
+  const BASE_PROGRESS_PER_SEC = 2;
+  const CORRECT_O2_BONUS = 44, CORRECT_PROGRESS_BURST = 4, WRONG_O2_PENALTY = 15;
+  const STEP_MS = 100;
+  const SCROLL_BASE_SPEED = 45;
+
+  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS);
+
+  let o2 = O2_START;
+  let progress = 0;
+  let startTime = null;
+  let stepTimer = null;
+  let timerInterval = null;
+  let finished = false;
+  let drift = null;
+
+  function speedFactor(){
+    if (o2 <= 0) return 0;
+    if (o2 >= O2_LOW_THRESHOLD) return 1;
+    return o2 / O2_LOW_THRESHOLD;
+  }
+
+  function updateVisuals(){
+    updateGameMarker(`${prefix}StartMarker`, progress, 0, PX_PER_PERCENT);
+    updateGameMarker(`${prefix}FinishMarker`, progress, PROGRESS_WIN, PX_PER_PERCENT);
+    updateGameBar(`${prefix}ProgressFill`, progress / PROGRESS_WIN);
+    updateGameBar(`${prefix}O2Fill`, o2 / O2_START);
+    if (figureEl) {
+      figureEl.classList.remove("is-swimming", "is-gasping");
+      figureEl.classList.add(o2 <= 0 ? "is-gasping" : "is-swimming");
+    }
+    // pool lines track the swimmer's actual current speed, so they
+    // ease to a stop when out of air instead of drifting regardless
+    if (drift) drift.setBase(SCROLL_BASE_SPEED * speedFactor());
+  }
+
+  function askQuestion(){
+    if (finished) return;
+    renderGameQuestion(prefix, nextQuestion(), handleAnswer);
+  }
+
+  function handleAnswer(correct){
+    if (finished) return;
+    if (correct) {
+      o2 = Math.min(O2_START, o2 + CORRECT_O2_BONUS);
+      progress = Math.min(PROGRESS_WIN, progress + CORRECT_PROGRESS_BURST);
+      briefBoost(figureEl, drift);
+    } else {
+      o2 = Math.max(0, o2 - WRONG_O2_PENALTY);
+    }
+    updateVisuals();
+    if (progress >= PROGRESS_WIN) { finishGame(); return; }
+    setTimeout(askQuestion, 400);
+  }
+
+  function step(){
+    if (finished) return;
+    o2 = Math.max(0, o2 - (O2_DEPLETE_PER_SEC * STEP_MS / 1000));
+    progress = Math.min(PROGRESS_WIN, progress + (BASE_PROGRESS_PER_SEC * speedFactor() * STEP_MS / 1000));
+    updateVisuals();
+    if (progress >= PROGRESS_WIN) finishGame();
+  }
+
+  function updateTimerDisplay(){
+    if (timerEl && startTime !== null) timerEl.textContent = formatTime((Date.now() - startTime) / 1000);
+  }
+
+  function finishGame(){
+    finished = true;
+    clearInterval(stepTimer);
+    clearInterval(timerInterval);
+    if (drift) drift.stop();
+    const elapsed = (Date.now() - startTime) / 1000;
+    const isNewBest = recordBestTime("broncoSplash", elapsed);
+    if (questionPanel) questionPanel.hidden = true;
+    if (figureEl) figureEl.className = "stick-figure";
+    if (finishTimeEl) {
+      finishTimeEl.innerHTML = `Time: ${formatTime(elapsed)}` + (isNewBest ? ` <span class="is-new-best">— new best!</span>` : "");
+    }
+    if (finishPanel) finishPanel.hidden = false;
+  }
+
+  function startGame(){
+    o2 = O2_START;
+    progress = 0;
+    finished = false;
+    startTime = Date.now();
+    if (startPanel) startPanel.hidden = true;
+    if (finishPanel) finishPanel.hidden = true;
+    if (stage) stage.hidden = false;
+    if (questionPanel) questionPanel.hidden = false;
+    if (figureEl) figureEl.className = "stick-figure is-swimming";
+    updateVisuals();
+    if (drift) drift.stop();
+    drift = createScrollDrift(scrollEl, SCROLL_BASE_SPEED);
+    stepTimer = setInterval(step, STEP_MS);
+    timerInterval = setInterval(updateTimerDisplay, 100);
+    askQuestion();
+  }
+
+  startBtn.addEventListener("click", startGame);
+  if (playAgainBtn) playAgainBtn.addEventListener("click", startGame);
 }
 
 document.addEventListener("DOMContentLoaded", () => {

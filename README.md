@@ -63,6 +63,7 @@ The footer's version number (`SITE_VERSION` in `config.js`) is a manual label fo
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
 ### Unreleased
+- Fixed Special Edition wins not being credited for Word Flower–type embeds (`embedUrl` path `/pmm/wordf`). The win-detection listener only recognized AmuseLabs' `PUZZLE_COMPLETE` message, but Word Flower puzzles never send one — they only send `PUZZLE_PROGRESS` as each word is found, with no separate "done" event. It now also treats a Word Flower puzzle as won once `wordsFound` reaches `totalWords`. Crossword-type embeds (Mini/Weekly Crossword, Special Edition crosswords) are unaffected — they still use `PUZZLE_COMPLETE` as before.
 
 
 ### Version 1.3.1 — August 2026

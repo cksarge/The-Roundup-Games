@@ -82,7 +82,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.3-pre.2";
+const SITE_VERSION = "1.3";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Mini Crossword + Guess the Teacher
@@ -317,24 +317,89 @@ const SPECIAL_PUZZLES = [
 */
 
 const PERSISTENT_GAME_QUESTIONS = [
-  { question: "What planet is known as the Red Planet?", choices: ["Venus", "Mars", "Jupiter", "Saturn"], correctIndex: 1 },
-  { question: "How many continents are there?", choices: ["5", "6", "7", "8"], correctIndex: 2 },
-  { question: "What is the capital of Arizona?", choices: ["Tucson", "Flagstaff", "Mesa", "Phoenix"], correctIndex: 3 },
-  { question: "Which ocean is the largest?", choices: ["Atlantic", "Indian", "Pacific", "Arctic"], correctIndex: 2 },
-  { question: "How many players are on a soccer team on the field?", choices: ["9", "10", "11", "12"], correctIndex: 2 },
-  { question: "What gas do plants absorb from the air?", choices: ["Oxygen", "Carbon dioxide", "Nitrogen", "Hydrogen"], correctIndex: 1 },
-  { question: "What is the fastest land animal?", choices: ["Lion", "Cheetah", "Horse", "Greyhound"], correctIndex: 1 },
-  { question: "How many minutes are in a full day?", choices: ["1,440", "1,000", "2,400", "720"], correctIndex: 0 },
-  { question: "What is H2O more commonly known as?", choices: ["Salt", "Water", "Sugar", "Air"], correctIndex: 1 },
-  { question: "How many legs does a spider have?", choices: ["6", "8", "10", "12"], correctIndex: 1 },
-  { question: "What is the largest organ in the human body?", choices: ["Heart", "Liver", "Skin", "Brain"], correctIndex: 2 },
-  { question: "Which country is home to the kangaroo?", choices: ["Brazil", "South Africa", "Australia", "India"], correctIndex: 2 },
-  { question: "What do you call a baby dog?", choices: ["Kit", "Cub", "Puppy", "Foal"], correctIndex: 2 },
-  { question: "How many strings does a standard guitar have?", choices: ["4", "5", "6", "7"], correctIndex: 2 },
-  { question: "What is the freezing point of water in Fahrenheit?", choices: ["0°", "32°", "100°", "212°"], correctIndex: 1 },
-  { question: "Which sport uses a shuttlecock?", choices: ["Tennis", "Badminton", "Squash", "Table tennis"], correctIndex: 1 }
-  // Add more here — see the example above. Ideally dozens+, since
-  // "really large" means a run rarely (or never) sees a repeat.
+  // ===== HISTORY & FOUNDING =====
+  { question: "In what year was Brophy College Preparatory founded?", choices: ["1918", "1928", "1938", "1948"], correctIndex: 1 },
+  { question: "Who founded Brophy in memory of her late husband?", choices: ["Ellen A. Brophy", "Mary Xavier", "Frances Keating", "Dorothy Steele"], correctIndex: 0 },
+  { question: "Brophy was founded in memory of which man?", choices: ["William Henry Brophy", "Frank Cullen Brophy", "John Patrick Brophy", "Robert E. Ryan"], correctIndex: 0 },
+  { question: "The Great Depression forced Brophy to close its doors in what year?", choices: ["1930", "1932", "1935", "1940"], correctIndex: 2 },
+  { question: "How many years did Brophy remain closed before reopening?", choices: ["10", "12", "17", "20"], correctIndex: 2 },
+  { question: "In what year did Brophy reopen, this time exclusively as a high school?", choices: ["1945", "1950", "1952", "1955"], correctIndex: 2 },
+  { question: "When it first opened in 1928, Brophy offered high school classes plus what other level of coursework?", choices: ["Trade school courses", "First-year college courses", "Seminary courses", "Military academy courses"], correctIndex: 1 },
+  { question: "Brophy's 1928 opening marked the return of which Catholic religious order to Arizona after more than 160 years?", choices: ["Franciscans", "Dominicans", "Jesuits", "Benedictines"], correctIndex: 2 },
+  { question: "What is Brophy's Latin motto?", choices: ["Ad Astra Per Aspera", "Ad Majorem Dei Gloriam", "Veritas Vos Liberabit", "Fides et Ratio"], correctIndex: 1 },
+  { question: "What does Brophy's motto, 'Ad Majorem Dei Gloriam,' translate to in English?", choices: ["For God and Country", "For the Greater Glory of God", "Faith Above All", "Onward and Upward"], correctIndex: 1 },
+  { question: "Approximately how many students enrolled when Brophy first opened in September 1928?", choices: ["26", "42", "56", "70"], correctIndex: 2 },
+  { question: "In what year was Brophy's chapel added to the National Register of Historic Places?", choices: ["1983", "1993", "2003", "2013"], correctIndex: 1 },
+  { question: "What was the original name of the building now known as Brophy Hall, before it was renamed in 2006?", choices: ["Regis Hall", "Loyola Hall", "Founders Hall", "Xavier Hall"], correctIndex: 0 },
+  { question: "In 2006, Regis Hall was renamed in honor of which member of the Brophy family?", choices: ["Frank C. Brophy Jr.", "William Henry Brophy", "Ellen A. Brophy", "Michael Brophy"], correctIndex: 0 },
+  { question: "Brophy added an on-campus middle school in 2011 to serve underserved young men with strong academic potential. What is it called?", choices: ["Loyola Academy", "Xavier Middle School", "Ignatius Prep", "Ricci Academy"], correctIndex: 0 },
+ 
+  // ===== CAMPUS, TRADITIONS & IDENTITY =====
+  { question: "What are Brophy's official school colors?", choices: ["Blue and gold", "Red and white", "Green and white", "Maroon and gray"], correctIndex: 1 },
+  { question: "What is Brophy's mascot?", choices: ["Wildcat", "Bronco", "Bulldog", "Falcon"], correctIndex: 1 },
+  { question: "Brophy adopted its Bronco mascot in 1952 after purchasing used equipment from which university?", choices: ["Santa Clara University", "Georgetown University", "Loyola Marymount University", "Boston College"], correctIndex: 0 },
+  { question: "What is the name of Brophy's all-girls sister school on an adjacent campus?", choices: ["Xavier College Preparatory", "St. Mary's High School", "Notre Dame Prep", "Our Lady of Sorrows"], correctIndex: 0 },
+  { question: "Brophy's football rivalry with which school dates back to 1959?", choices: ["St. Mary's", "Xavier College Prep", "Central High School", "Corona del Sol"], correctIndex: 0 },
+  { question: "What is the name of Brophy's student newspaper?", choices: ["The Bronco Beat", "The Roundup", "The Stampede Times", "The Wrangler Weekly"], correctIndex: 1 },
+  { question: "What is Brophy's yearbook called?", choices: ["The Tower", "The Bronco", "The Legacy", "The Stampede"], correctIndex: 0 },
+  { question: "How tall is the bell tower atop Brophy's historic chapel?", choices: ["95 feet", "115 feet", "135 feet", "155 feet"], correctIndex: 2 },
+  { question: "Brophy's campus architecture is built in which style?", choices: ["Gothic Revival", "Spanish Colonial", "Art Deco", "Modernist"], correctIndex: 1 },
+  { question: "Brophy's system of dividing students into eight houses named after saints was inspired by the residential college system at which university?", choices: ["Harvard", "Yale", "Princeton", "Stanford"], correctIndex: 1 },
+  { question: "Which of these is one of Brophy's eight student houses?", choices: ["Gonzaga", "Ravenclaw", "Hufflepuff", "Slytherin"], correctIndex: 0 },
+  { question: "What is the name of Brophy's retreat center located near Sedona?", choices: ["Manresa", "Loyola Lodge", "Xavier Ranch", "Ignatius Retreat"], correctIndex: 0 },
+  { question: "Brophy's basketball student section, known for its energy, has been compared to Duke's 'Cameron Crazies.' What is it called?", choices: ["The 6th Man", "The Bronco Brigade", "The Red Sea", "The Stampede"], correctIndex: 0 },
+  { question: "The phrase 'Men for Others,' central to Brophy's mission, was first articulated in 1974 by which Jesuit leader?", choices: ["Fr. Pedro Arrupe", "St. Ignatius of Loyola", "Pope John Paul II", "Fr. James Martin"], correctIndex: 0 },
+  { question: "Brophy is the only school of what type in the entire state of Arizona?", choices: ["Jesuit high school", "All-boys military academy", "Montessori high school", "Boarding school"], correctIndex: 0 },
+  { question: "What is the nickname of Brophy's multi-functional gymnasium, completed in 2016?", choices: ["The Vault", "The Dutch", "The Hangar", "The Bunker"], correctIndex: 1 },
+ 
+  // ===== ACADEMICS & CURRICULUM =====
+  { question: "Brophy's senior capstone program, which pairs graduate-level theology discussion with a year-long internship, is named after which figure?", choices: ["Romero", "Loyola", "Xavier", "Aquinas"], correctIndex: 0 },
+  { question: "Through which community college does Brophy offer students a dual-enrollment program for college credit?", choices: ["Phoenix College", "Rio Salado College", "Scottsdale Community College", "Glendale Community College"], correctIndex: 1 },
+  { question: "Brophy was among the first schools in the country to implement which College Board program?", choices: ["AP Capstone Diploma", "International Baccalaureate", "Cambridge AICE", "Early College Program"], correctIndex: 0 },
+  { question: "As part of the 'Frosh Experience,' incoming freshmen are paired with a senior mentor known as their what?", choices: ["Big Brother", "Guardian Angel", "Sponsor", "Wingman"], correctIndex: 0 },
+  { question: "The 'Frosh Experience' culminates each spring with a day of volunteering at what event?", choices: ["Special Olympics Game Day", "Habitat for Humanity Build", "The Turkey Drive", "Founders Day"], correctIndex: 0 },
+  { question: "Which subjects made up Brophy's very first course of study in 1928, alongside religion?", choices: ["Latin, English, math/science, and history/civics", "Spanish, chemistry, art, and PE", "Greek, philosophy, music, and drama", "Computer science, biology, French, and speech"], correctIndex: 0 },
+  { question: "Approximately how many Advanced Placement classes does Brophy offer?", choices: ["15", "24", "33", "42"], correctIndex: 2 },
+  { question: "What annual charity event has students compete for donations as part of the inter-house points competition?", choices: ["The Book Drive", "The Turkey Drive", "The Coat Drive", "The Can Drive"], correctIndex: 1 },
+  { question: "What replaced the Steele Library as Brophy's central information and technology hub?", choices: ["Innovation Commons", "McCain Colonnade", "Harper Great Hall", "Piper Center"], correctIndex: 0 },
+  { question: "Which Brophy alumnus and entrepreneur founded 'Not Impossible Labs,' whose work is used as an example in Brophy's technology courses?", choices: ["Mick Ebeling", "David Griffin", "Richard Mahoney", "Glen Keane"], correctIndex: 0 },
+ 
+  // ===== GENERAL SCHOOL FACTS =====
+  { question: "In which U.S. state is Brophy College Preparatory located?", choices: ["California", "Arizona", "Nevada", "New Mexico"], correctIndex: 1 },
+  { question: "In which city is Brophy College Preparatory located?", choices: ["Tucson", "Scottsdale", "Phoenix", "Mesa"], correctIndex: 2 },
+  { question: "Brophy College Preparatory enrolls students of which gender?", choices: ["All-male", "All-female", "Co-ed", "Varies by grade"], correctIndex: 0 },
+  { question: "What grade levels does Brophy's high school serve?", choices: ["6-8", "7-12", "9-12", "K-12"], correctIndex: 2 },
+  { question: "Approximately how many students currently attend Brophy?", choices: ["900", "1,100", "1,400", "1,700"], correctIndex: 2 },
+  { question: "Approximately what percentage of Brophy's student body identifies as Catholic?", choices: ["45%", "55%", "65%", "75%"], correctIndex: 2 },
+  { question: "Brophy College Preparatory is what type of school?", choices: ["Public school", "Private Catholic school", "Charter school", "Military academy"], correctIndex: 1 },
+ 
+  // ===== ATHLETICS — GENERAL =====
+  { question: "How many total state championships has Brophy won across all sports, according to the school's own count?", choices: ["About 75", "About 95", "About 119", "About 150"], correctIndex: 2 },
+  { question: "Sports Illustrated has ranked Brophy's athletic program among the top how many in the nation?", choices: ["Top 10", "Top 25", "Top 50", "Top 100"], correctIndex: 1 },
+  { question: "Brophy is one of only two Arizona high schools that field a rowing/crew team. What is the other school?", choices: ["Xavier College Preparatory", "Saint Mary's", "Notre Dame Prep", "Corona del Sol"], correctIndex: 0 },
+  { question: "Which of the following is one of Brophy's club sports (not sanctioned by the AIA)?", choices: ["Archery", "Football", "Basketball", "Baseball"], correctIndex: 0 },
+  { question: "What Arizona high school athletic association do Brophy's teams compete in?", choices: ["AIA", "CIF", "UIL", "OHSAA"], correctIndex: 0 },
+  { question: "Brophy's esports program has been ranked where nationally?", choices: ["Unranked", "Top 50", "Top 10", "No. 1"], correctIndex: 3 },
+ 
+  // ===== ATHLETICS — SPECIFIC CHAMPIONSHIPS =====
+  { question: "As of 2020, how many state titles had Brophy's storied swim program won?", choices: ["22", "32", "42", "52"], correctIndex: 2 },
+  { question: "How many of Brophy's swim state titles were won in a row, consecutively?", choices: ["12", "22", "32", "42"], correctIndex: 2 },
+  { question: "In what year did the Brophy swim team win the national high school championship?", choices: ["2001", "2003", "2005", "2008"], correctIndex: 2 },
+  { question: "Brophy football won 5A-I state championships in 2005 and which other year?", choices: ["2006", "2007", "2008", "2009"], correctIndex: 1 },
+  { question: "Brophy's baseball and volleyball teams both won state championships in the same year. Which year was it?", choices: ["2004", "2005", "2006", "2007"], correctIndex: 2 },
+  { question: "Brophy's boys soccer team won back-to-back Division 1 state titles in which two years?", choices: ["2012 and 2013", "2014 and 2015", "2016 and 2017", "2018 and 2019"], correctIndex: 1 },
+  { question: "In 2025, Brophy's boys basketball team won the school's first-ever state championship in that sport. How many times had the team previously finished as runner-up?", choices: ["Two", "Three", "Four", "Five"], correctIndex: 2 },
+  { question: "Who is the head coach who led Brophy's basketball team to its historic first state title in 2025?", choices: ["Matt Hooten", "Jason Jewell", "Paul Allen", "Robert Ryan"], correctIndex: 0 },
+  { question: "In 2025, Brophy's golf team won the state championship by how many strokes?", choices: ["11", "16", "21", "26"], correctIndex: 2 },
+  { question: "The 2025 golf title marked how many state championships all-time for that program?", choices: ["7th", "8th", "9th", "10th"], correctIndex: 3 },
+  { question: "Brophy's lacrosse team won three straight Division I state championships from 2022 through which year?", choices: ["2023", "2024", "2025", "2026"], correctIndex: 1 },
+  { question: "Brophy's tennis program won a remarkable streak of state championships from 1996 through what year?", choices: ["1999", "2001", "2003", "2005"], correctIndex: 2 },
+  { question: "In what year did Brophy win its first-ever varsity hockey state championship?", choices: ["2010", "2012", "2014", "2016"], correctIndex: 1 },
+  { question: "Brophy's soccer program is one of the most successful in the state, having won how many total state titles?", choices: ["Four", "Six", "Eight", "Ten"], correctIndex: 2 },
+  { question: "Brophy took home the 5A-1 soccer state title in the 2019-2020 season and finished the year ranked where nationally?", choices: ["No. 3", "No. 8", "No. 13", "No. 20"], correctIndex: 2 },
+  { question: "Brophy's rowing/crew team won Arizona State Junior Rowing Championships in 2011, 2012, and which other year?", choices: ["2013", "2014", "2015", "2016"], correctIndex: 0 },
+  { question: "Brophy volleyball won state championships in 1998, 2006, and which other year?", choices: ["2000", "2001", "2003", "2004"], correctIndex: 1 },
+  { question: "Brophy's track and field program produced Arizona state champions in 2011 and which other year?", choices: ["2012", "2013", "2014", "2015"], correctIndex: 1 }
 ];
 
 /* ================================================================
@@ -1335,6 +1400,23 @@ function shuffleArray(arr){
   return a;
 }
 
+/* Returns a shuffled view of a question's answer choices — a new
+   array in random order, plus which position in that new order now
+   holds the correct answer — without touching the question object
+   itself. That object is a shared reference reused every time this
+   same question comes up again in the draw queue (and the queue
+   reshuffles and repeats indefinitely, see createQuestionQueue
+   below), so mutating its `choices`/`correctIndex` in place would
+   leak this shuffle into later, unrelated draws of the same
+   question instead of staying local to this one render. */
+function shuffleQuestionChoices(question){
+  const order = shuffleArray([0, 1, 2, 3]);
+  return {
+    choices: order.map(i => question.choices[i]),
+    correctIndex: order.indexOf(question.correctIndex)
+  };
+}
+
 /* Draws questions from `pool` in a random order with no immediate
    repeats; reshuffles and keeps going once it runs out, so a run
    can never actually exhaust the pool. */
@@ -1351,17 +1433,23 @@ function createQuestionQueue(pool){
 }
 
 /* Renders one question into `${prefix}QuestionText` / `${prefix}Choices`
-   and wires up its 4 answer buttons. `onAnswer(wasCorrect)` fires once,
-   after briefly highlighting the chosen answer (and the correct one,
-   if the choice was wrong) so the player sees what they got. */
+   and wires up its 4 answer buttons (labeled A-D — also the keyboard
+   shortcuts enableKeyboardAnswers below wires up), in a freshly
+   shuffled order each time (see shuffleQuestionChoices above) so the
+   correct answer isn't always in the same position when a question
+   repeats. `onAnswer(wasCorrect)` fires once, after briefly
+   highlighting the chosen answer (and the correct one, if the choice
+   was wrong) so the player sees what they got. */
 function renderGameQuestion(prefix, question, onAnswer){
   const textEl = document.getElementById(`${prefix}QuestionText`);
   const choicesEl = document.getElementById(`${prefix}Choices`);
   if (!textEl || !choicesEl) return;
 
+  const shuffled = shuffleQuestionChoices(question);
+  const LETTERS = ["A", "B", "C", "D"];
   textEl.textContent = question.question;
-  choicesEl.innerHTML = question.choices.map((choice, i) =>
-    `<button class="game-question__choice" type="button" data-choice-index="${i}">${escapeHtml(choice)}</button>`
+  choicesEl.innerHTML = shuffled.choices.map((choice, i) =>
+    `<button class="game-question__choice" type="button" data-choice-index="${i}"><span class="choice-letter">${LETTERS[i]}.</span>${escapeHtml(choice)}</button>`
   ).join("");
 
   choicesEl.querySelectorAll("[data-choice-index]").forEach(btn => {
@@ -1369,14 +1457,36 @@ function renderGameQuestion(prefix, question, onAnswer){
       const buttons = choicesEl.querySelectorAll("[data-choice-index]");
       buttons.forEach(b => { b.disabled = true; });
 
-      const correct = Number(btn.dataset.choiceIndex) === question.correctIndex;
+      const correct = Number(btn.dataset.choiceIndex) === shuffled.correctIndex;
       btn.classList.add(correct ? "is-correct" : "is-wrong");
       if (!correct) {
-        const correctBtn = choicesEl.querySelector(`[data-choice-index="${question.correctIndex}"]`);
+        const correctBtn = choicesEl.querySelector(`[data-choice-index="${shuffled.correctIndex}"]`);
         if (correctBtn) correctBtn.classList.add("is-correct");
       }
       onAnswer(correct);
     });
+  });
+}
+
+/* Lets the keyboard pick an answer choice — 1/2/3/4 or A/B/C/D — for
+   any persistent game's question, since every one of them (Dash,
+   Splash, Blitz) renders its choices as buttons with a
+   `data-choice-index` inside `${choicesElId}`. One listener added
+   once per game page rather than one per question: it just looks up
+   whichever button is live in the DOM at keypress time, so it needs
+   no cleanup and can't double-fire or go stale between questions. */
+function enableKeyboardAnswers(choicesElId){
+  const KEYS = ["1", "2", "3", "4", "a", "b", "c", "d"];
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    const keyIndex = KEYS.indexOf(key);
+    if (keyIndex === -1) return;
+
+    const choicesEl = document.getElementById(choicesElId);
+    if (!choicesEl) return;
+    const btn = choicesEl.querySelector(`[data-choice-index="${keyIndex % 4}"]`);
+    if (btn && !btn.disabled) btn.click();
   });
 }
 
@@ -1471,6 +1581,7 @@ function initBroncoDash(){
   const figureEl = stage ? stage.querySelector(".stick-figure") : null;
   const scrollEl = stage ? stage.querySelector(".game-scroll") : null;
   if (!startBtn) return;
+  enableKeyboardAnswers(`${prefix}Choices`);
 
   const START = 30, WIN = 60, PX_PER_TICK = 14;
   const PACE_START_GAP = 8, PACE_PER_SEC = 1, STEP_MS = 100;
@@ -1609,6 +1720,7 @@ function initBroncoSplash(){
   const figureEl = stage ? stage.querySelector(".stick-figure") : null;
   const scrollEl = stage ? stage.querySelector(".game-scroll") : null;
   if (!startBtn) return;
+  enableKeyboardAnswers(`${prefix}Choices`);
 
   const O2_START = 100, PROGRESS_WIN = 100, PX_PER_PERCENT = 22;
   const O2_DEPLETE_PER_SEC = 12, O2_LOW_THRESHOLD = 20;
@@ -1742,6 +1854,7 @@ function initBroncoBlitz(){
   const pointsMsgEl = document.getElementById(`${prefix}PointsMsg`);
   const waitEl = document.getElementById(`${prefix}WaitMsg`);
   if (!startBtn) return;
+  enableKeyboardAnswers(`${prefix}Choices`);
 
   const GAME_MS = 30000, LOW_TIME_MS = 5000;
   const BASE_POINTS = 100;
@@ -1787,27 +1900,28 @@ function initBroncoBlitz(){
     if (waitEl) waitEl.textContent = "";
     if (pointsMsgEl) pointsMsgEl.textContent = "";
     const question = nextQuestion();
+    const shuffled = shuffleQuestionChoices(question);
     questionShownAt = Date.now();
 
     if (textEl) textEl.textContent = question.question;
     if (!choicesEl) return;
-    choicesEl.innerHTML = question.choices.map((choice, i) =>
+    choicesEl.innerHTML = shuffled.choices.map((choice, i) =>
       `<button class="game-question__choice" type="button" data-choice-index="${i}"><span class="choice-letter">${LETTERS[i]}.</span>${escapeHtml(choice)}</button>`
     ).join("");
 
     choicesEl.querySelectorAll("[data-choice-index]").forEach(btn => {
-      btn.addEventListener("click", () => handleAnswer(question, Number(btn.dataset.choiceIndex), btn));
+      btn.addEventListener("click", () => handleAnswer(shuffled.correctIndex, Number(btn.dataset.choiceIndex), btn));
     });
   }
 
-  function handleAnswer(question, choiceIndex, btn){
+  function handleAnswer(correctIndex, choiceIndex, btn){
     if (finished) return;
     choicesEl.querySelectorAll("[data-choice-index]").forEach(b => { b.disabled = true; });
 
-    const correct = choiceIndex === question.correctIndex;
+    const correct = choiceIndex === correctIndex;
     btn.classList.add(correct ? "is-correct" : "is-wrong");
     if (!correct) {
-      const correctBtn = choicesEl.querySelector(`[data-choice-index="${question.correctIndex}"]`);
+      const correctBtn = choicesEl.querySelector(`[data-choice-index="${correctIndex}"]`);
       if (correctBtn) correctBtn.classList.add("is-correct");
     }
 

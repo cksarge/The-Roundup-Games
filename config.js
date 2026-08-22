@@ -677,14 +677,35 @@ function renderSpecialEmbed(mountId, embedUrl, titleLabel, winId){
    page — the win itself is recorded under that wrap's own
    data-stats-win-id (the site's own isoDate for that puzzle), so
    wins line up with DAILY_PUZZLES/WEEKLY_PUZZLES/SPECIAL_PUZZLES for
-   streak calculations regardless of AmuseLabs' internal id. */
+   streak calculations regardless of AmuseLabs' internal id.
+
+   Not every puzzle type sends the same completion signal, though —
+   confirmed against AmuseLabs' own iframe-communication docs after a
+   Word Flower Special Edition win wasn't getting credited:
+     - Crosswords (and, per AmuseLabs' docs, puzzle types generally)
+       send one PUZZLE_COMPLETE message with completedCorrectly: true.
+     - Word Flower (embedUrl path /pmm/wordf, as used by at least one
+       Special Edition entry) never sends PUZZLE_COMPLETE at all — it
+       only sends PUZZLE_PROGRESS as each word is found, with
+       wordsFound/totalWords counts and no separate "done" event. For
+       that type, finding every word (wordsFound >= totalWords) IS
+       the completion signal.
+   Any future embed type that also turns out not to send
+   PUZZLE_COMPLETE would need its own condition added here the same
+   way. */
 const AMUSELABS_ORIGIN = "https://puzzleme.amuselabs.com";
 
 function initPuzzleCompletionListener(){
   window.addEventListener("message", (event) => {
     if (event.origin !== AMUSELABS_ORIGIN) return;
     const data = event.data;
-    if (!data || data.type !== "PUZZLE_COMPLETE" || !data.completedCorrectly || !data.id) return;
+    if (!data || !data.id) return;
+
+    const isCrosswordStyleComplete = data.type === "PUZZLE_COMPLETE" && data.completedCorrectly;
+    const isWordFlowerComplete = data.type === "PUZZLE_PROGRESS"
+      && typeof data.wordsFound === "number" && typeof data.totalWords === "number"
+      && data.totalWords > 0 && data.wordsFound >= data.totalWords;
+    if (!isCrosswordStyleComplete && !isWordFlowerComplete) return;
 
     document.querySelectorAll(".crossword-frame-wrap iframe").forEach(iframe => {
       if (iframe.src.indexOf(data.id) !== -1) {

@@ -31,6 +31,7 @@
         <div class="dateline__dropdown-menu">
           <a href="mini-crossword.html">Daily Crossword</a>
           <a href="weekly-crossword.html" aria-current="page">Weekly Crossword</a>
+          <a href="weekly-word-search.html">Weekly Word Search</a>
           <a href="guess-the-teacher.html">Guess the Teacher</a>
           <a href="special-edition.html">Special Edition</a>
           <a href="bronco-dash.html">Bronco Dash (BETA)</a>
@@ -51,6 +52,7 @@
     <p class="hero__eyebrow">This Week's Edition</p>
     <h1>Weekly Crossword</h1>
     <p>A bigger, themed grid — posted every Monday.</p>
+    <div id="weeklyCrosswordThemeMount"></div>
     <a class="hero__back" href="index.html">← Back to all games</a>
   </div>
 
@@ -74,7 +76,8 @@
 
 <script src="config.js"></script>
 <script>
-  renderCrossword("weeklyCrosswordFrameWrap", "weeklyCrosswordDate", WEEKLY_CROSSWORD, withDifficulty(WEEKLY_CROSSWORD.date, WEEKLY_CROSSWORD.difficulty));
+  document.getElementById("weeklyCrosswordThemeMount").innerHTML = themeLineHtml(THIS_WEEK.crossword ? THIS_WEEK.crossword.theme : "");
+  renderCrossword("weeklyCrosswordFrameWrap", "weeklyCrosswordDate", THIS_WEEK, withDifficulty(THIS_WEEK.date, THIS_WEEK.crossword ? THIS_WEEK.crossword.difficulty : null));
 </script>
 </body>
 </html>

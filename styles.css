@@ -259,6 +259,18 @@ a{ color:inherit; }
   line-height:1.55;
   margin:0;
 }
+/* optional "Theme: X" line for Weekly Crossword / Weekly Word Search
+   — deliberately understated (small, mono) since it's not meant to
+   compete with the Special Edition banner's theme treatment */
+.hero__theme{
+  position:relative;
+  margin:0.6rem 0 0;
+  font-family:var(--font-mono);
+  font-size:0.78rem;
+  letter-spacing:0.02em;
+  color:var(--maroon-800);
+}
+.hero__theme strong{ color:var(--maroon-900); font-weight:600; }
 .hero__back{
   position:relative;
   display:inline-flex;

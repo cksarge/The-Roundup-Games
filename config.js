@@ -87,7 +87,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.4.2";
+const SITE_VERSION = "1.4.3";
 
 /* BUG REPORT FORM
    -----------------------------------------------------------------
@@ -97,6 +97,12 @@ const SITE_VERSION = "1.4.2";
    quotes. Leave it as "" and the page will show a "not set up yet"
    message instead of a broken embed. */
 const BUG_REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd06QWeyW1mz8oQe6ePfB4d1G1raWePiSZIiBOhZq-YZXC2Gg/viewform?embedded=true";
+
+/* The plain shareable link to the same form (e.g. the "Send" button's
+   forms.gle short link, NOT the embed URL above) — shown below the
+   embed as a fallback in case the embed itself isn't loading for
+   someone. Leave it as "" to hide that fallback line entirely. */
+const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Daily Crossword + Guess the Teacher
@@ -764,17 +770,24 @@ function renderWordSearch(mountId, dateId, data, dateLabel){
 }
 
 /* ---------- bug report form embed (report-bug.html only) ----------
-   Reads BUG_REPORT_FORM_URL above rather than taking it as an
-   argument — unlike the puzzle embeds, there's only ever one of
-   these, so there's no per-call data to pass in. */
+   Reads BUG_REPORT_FORM_URL/BUG_REPORT_FORM_LINK above rather than
+   taking them as arguments — unlike the puzzle embeds, there's only
+   ever one of these, so there's no per-call data to pass in. */
 function renderBugReportForm(){
   const wrap = document.getElementById("bugReportFrameWrap");
-  if (!wrap) return;
-  if (!BUG_REPORT_FORM_URL) {
-    wrap.innerHTML = `<div class="crossword-fallback">The bug report form hasn't been set up yet.</div>`;
-    return;
+  const noteEl = document.getElementById("bugReportFallbackNote");
+  if (wrap) {
+    if (!BUG_REPORT_FORM_URL) {
+      wrap.innerHTML = `<div class="crossword-fallback">The bug report form hasn't been set up yet.</div>`;
+    } else {
+      wrap.innerHTML = `<iframe src="${BUG_REPORT_FORM_URL}" title="Bug report form" loading="lazy">Loading…</iframe>`;
+    }
   }
-  wrap.innerHTML = `<iframe src="${BUG_REPORT_FORM_URL}" title="Bug report form" loading="lazy">Loading…</iframe>`;
+  if (noteEl) {
+    noteEl.innerHTML = BUG_REPORT_FORM_LINK
+      ? `If the embed above isn't working, you can also visit the form at <a href="${BUG_REPORT_FORM_LINK}" target="_blank" rel="noopener">${BUG_REPORT_FORM_LINK}</a>`
+      : "";
+  }
 }
 
 /* ---------- special edition embed ----------
@@ -2139,7 +2152,7 @@ function initBroncoBlitz(){
 
   function updateHud(){
     if (scoreEl) scoreEl.textContent = score.toLocaleString();
-    if (streakEl) streakEl.textContent = streak > 0 ? `${streak} (×${currentMultiplier().toFixed(2)})` : "0";
+    if (streakEl) streakEl.textContent = `${streak} (×${currentMultiplier().toFixed(2)})`;
     if (streakStatEl) streakStatEl.classList.toggle("is-hot", streak >= 3);
   }
 

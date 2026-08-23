@@ -87,7 +87,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.4";
+const SITE_VERSION = "1.4.1";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Daily Crossword + Guess the Teacher
@@ -785,9 +785,31 @@ function renderSpecialEmbed(mountId, embedUrl, titleLabel, winId){
 const AMUSELABS_ORIGIN = "https://puzzleme.amuselabs.com";
 
 function initPuzzleCompletionListener(){
+  // Registers window.addEventListener immediately when this runs
+  // (see the call site below, right after this function's own
+  // definition — not gated behind DOMContentLoaded like the rest of
+  // the site's init calls). window.addEventListener doesn't need the
+  // DOM to be ready; only the querySelectorAll below does, and that
+  // only ever runs once a message has actually arrived, by which
+  // point the sending iframe is guaranteed to already exist. This
+  // matters because a puzzle that's already been solved can replay
+  // its entire message sequence (including the completion message)
+  // within milliseconds of the iframe loading — waiting for
+  // DOMContentLoaded to register the listener risked missing that
+  // window entirely on a revisit.
   window.addEventListener("message", (event) => {
     if (event.origin !== AMUSELABS_ORIGIN) return;
-    const data = event.data;
+    // AmuseLabs doesn't send event.data consistently — some messages
+    // (e.g. the AMP "embed-size" ping) are a real object, but the
+    // actual puzzle-player messages (PUZZLE_LOAD, PUZZLE_COMPLETE,
+    // PUZZLE_PROGRESS, ...) arrive as a JSON *string* instead. Parse
+    // it if so; this was silently swallowing every puzzle-player
+    // message before (data.id on a string is always undefined, so
+    // the guard below returned early every single time).
+    let data = event.data;
+    if (typeof data === "string") {
+      try { data = JSON.parse(data); } catch (e) { return; }
+    }
     if (!data || !data.id) return;
 
     const isCrosswordStyleComplete = data.type === "PUZZLE_COMPLETE" && data.completedCorrectly;
@@ -805,6 +827,41 @@ function initPuzzleCompletionListener(){
         if (category && winId) recordWin(category, winId, streakEligible);
       }
     });
+  });
+}
+initPuzzleCompletionListener();
+
+/* ---------- puzzle message debugger ----------
+   Built to track down why Weekly Word Search's win wasn't being
+   credited (AmuseLabs doesn't publicly document what each puzzle
+   type actually sends on completion — that debugging session is
+   what found both the missing PUZZLE_PROGRESS/PUZZLE_COMPLETE
+   handling for non-crossword types and the bigger issue: some
+   AmuseLabs messages arrive as a JSON string instead of an object,
+   see initPuzzleCompletionListener above). Kept around rather than
+   deleted, since any future puzzle type (or AmuseLabs behavior
+   change) could need the same kind of live inspection again.
+
+   To use: open any page with a puzzle embed with ?debug=puzzle added
+   to the URL (e.g. weekly-word-search.html?debug=puzzle), then play
+   through it. A log panel appears at the bottom of the screen
+   showing the raw contents of every message from AmuseLabs as it
+   arrives. Does nothing on a normal visit — only activates with that
+   query param present. */
+if (location.search.indexOf("debug=puzzle") !== -1) {
+  const puzzleDebugLog = [];
+  window.addEventListener("message", (event) => {
+    if (event.origin !== AMUSELABS_ORIGIN) return;
+    puzzleDebugLog.push(`${new Date().toLocaleTimeString()}  ${JSON.stringify(event.data)}`);
+    const panel = document.getElementById("puzzleDebugPanel");
+    if (panel) panel.textContent = puzzleDebugLog.join("\n\n");
+  });
+  document.addEventListener("DOMContentLoaded", () => {
+    const panel = document.createElement("pre");
+    panel.id = "puzzleDebugPanel";
+    panel.style.cssText = "position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#7CFC7C;font:11px/1.4 monospace;padding:10px;margin:0;white-space:pre-wrap;z-index:99999;border-top:2px solid #7CFC7C;";
+    panel.textContent = "Listening for messages from " + AMUSELABS_ORIGIN + "... (play the puzzle)";
+    document.body.appendChild(panel);
   });
 }
 
@@ -2162,5 +2219,4 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("year") && (document.getElementById("year").textContent = new Date().getFullYear());
   document.getElementById("siteVersion") && (document.getElementById("siteVersion").textContent = SITE_VERSION);
   initEditionLabel();
-  initPuzzleCompletionListener();
 });

@@ -1363,6 +1363,10 @@ footer{
   line-height:1.55;
   margin:0 0 1.6rem;
 }
+/* .btn defaults to align-self:flex-start (left-aligned in most flex
+   contexts, like game cards) — override just here so it centers
+   under the message instead */
+.error-page .btn{ align-self:center; }
 
 @media (max-width:560px){
   .crossword-frame-wrap iframe{ height:520px; }

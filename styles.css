@@ -522,9 +522,9 @@ a{ color:inherit; }
   font-size:0.92rem;
 }
 
-/* bug report form embed — taller than a puzzle embed since Google
-   Forms scroll internally rather than fitting a fixed height well */
-.form-frame-wrap iframe{ height:1000px; }
+/* bug report form embed height — Google Forms scrolls internally if
+   the form is longer than this, so it doesn't need to fit exactly */
+.form-frame-wrap iframe{ height:450px; }
 
 /* ============================================================
    GUESS THE TEACHER widget

@@ -87,7 +87,16 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.4.1";
+const SITE_VERSION = "1.4.2";
+
+/* BUG REPORT FORM
+   -----------------------------------------------------------------
+   The embed link for the Google Form on report-bug.html. Create the
+   form at forms.google.com, then Send → the embed icon (< >) → copy
+   the URL inside that code's src="...". Paste it here between the
+   quotes. Leave it as "" and the page will show a "not set up yet"
+   message instead of a broken embed. */
+const BUG_REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd06QWeyW1mz8oQe6ePfB4d1G1raWePiSZIiBOhZq-YZXC2Gg/viewform?embedded=true";
 
 /* ----------------------------------------------------------------
    DAILY PUZZLES — Daily Crossword + Guess the Teacher
@@ -752,6 +761,20 @@ function renderWordSearch(mountId, dateId, data, dateLabel){
     return;
   }
   wrap.innerHTML = `<iframe src="${data.wordSearch.embedUrl}" title="Weekly word search — ${dateLabel || ""}" loading="lazy"></iframe>`;
+}
+
+/* ---------- bug report form embed (report-bug.html only) ----------
+   Reads BUG_REPORT_FORM_URL above rather than taking it as an
+   argument — unlike the puzzle embeds, there's only ever one of
+   these, so there's no per-call data to pass in. */
+function renderBugReportForm(){
+  const wrap = document.getElementById("bugReportFrameWrap");
+  if (!wrap) return;
+  if (!BUG_REPORT_FORM_URL) {
+    wrap.innerHTML = `<div class="crossword-fallback">The bug report form hasn't been set up yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<iframe src="${BUG_REPORT_FORM_URL}" title="Bug report form" loading="lazy">Loading…</iframe>`;
 }
 
 /* ---------- special edition embed ----------

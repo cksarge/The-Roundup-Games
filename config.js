@@ -261,6 +261,20 @@ const DAILY_PUZZLES = [
 
 const WEEKLY_PUZZLES = [
   {
+    isoDate: "2026-08-24",
+    date: "Week of August 24, 2026",
+    crossword: {
+      difficulty: "3/5",
+      theme: "Brophy Athletics",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupweekaug24&set=carter"
+    },
+    wordSearch: {
+      difficulty: "5/5",
+      theme: "Graduation Requirements",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/wordsearch?id=roundupsearchweekaug24&set=carter"
+    }
+  },
+  {
     isoDate: "2026-08-17",
     date: "Week of August 17, 2026",
     crossword: {
@@ -270,7 +284,7 @@ const WEEKLY_PUZZLES = [
     },
     wordSearch: {
       difficulty: "3/5",
-      theme: "Building Names at Brophy",
+      theme: "Building Names",
       embedUrl: "https://puzzleme.amuselabs.com/pmm/wordsearch?id=roundupsearchweekaug17&set=carter"
     }
   }

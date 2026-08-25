@@ -87,7 +87,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.4.3";
+const SITE_VERSION = "1.4.4";
 
 /* BUG REPORT FORM
    -----------------------------------------------------------------
@@ -145,6 +145,23 @@ const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
 */
 
 const DAILY_PUZZLES = [
+  {
+    isoDate: "2026-08-25",
+    date: "August 25, 2026",
+    crossword: {
+      difficulty: "2.5/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug25&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "2/5",
+      answer: "Mr. Ward",
+      clues: [
+        "This person knows pretty much everybody.",
+        "This faculty member deals with a lot of Brophy allumni.",
+        "This faculty member in the Admissions and Allumni Relations department."
+      ]
+    }
+  },
   {
     isoDate: "2026-08-24",
     date: "August 24, 2026",
@@ -645,7 +662,7 @@ const GAMES = [
   },
   {
     id: "bronco-dash",
-    title: "Bronco Dash (BETA)",
+    title: "Bronco Dash",
     blurb: "Race down the track, answering questions to sprint ahead — reach the finish line as fast as you can.",
     date: "Always Available",
     difficulty: null,
@@ -654,7 +671,7 @@ const GAMES = [
   },
   {
     id: "bronco-splash",
-    title: "Bronco Splash (BETA)",
+    title: "Bronco Splash",
     blurb: "Swim a lap before your air runs out — answer questions to catch your breath and pick up speed.",
     date: "Always Available",
     difficulty: null,
@@ -663,7 +680,7 @@ const GAMES = [
   },
   {
     id: "bronco-blitz",
-    title: "Bronco Blitz (BETA)",
+    title: "Bronco Blitz",
     blurb: "30 seconds, A/B/C/D trivia — chain correct answers for a growing multiplier and race the clock for a speed bonus.",
     date: "Always Available",
     difficulty: null,
@@ -1033,9 +1050,9 @@ const STAT_GAMES = [
   { id: "weeklyWordSearch", label: "Weekly Word Search", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
-  { id: "broncoDash", label: "Bronco Dash (BETA)", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false },
-  { id: "broncoSplash", label: "Bronco Splash (BETA)", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false },
-  { id: "broncoBlitz", label: "Bronco Blitz (BETA)", streak: false, streakUnit: null, trackWins: false, trackBestTime: false, trackPoints: true, trackBestScore: true }
+  { id: "broncoDash", label: "Bronco Dash", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false },
+  { id: "broncoSplash", label: "Bronco Splash", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false },
+  { id: "broncoBlitz", label: "Bronco Blitz", streak: false, streakUnit: null, trackWins: false, trackBestTime: false, trackPoints: true, trackBestScore: true }
 ];
 
 function loadStats(){

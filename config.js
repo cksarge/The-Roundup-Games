@@ -303,6 +303,20 @@ const DAILY_PUZZLES = [
 
 const WEEKLY_PUZZLES = [
   {
+    isoDate: "2026-08-31",
+    date: "Week of August 31, 2026",
+    crossword: {
+      difficulty: "3/5",
+      theme: "OFJ",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupweekaug31&set=carter"
+    },
+    wordSearch: {
+      difficulty: "4/5",
+      theme: "Enemy Team Mascots for Varsity Football Games",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/wordsearch?id=roundupsearchweekaug31&set=carter"
+    }
+  },
+  {
     isoDate: "2026-08-24",
     date: "Week of August 24, 2026",
     crossword: {

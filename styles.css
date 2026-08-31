@@ -674,6 +674,12 @@ a{ color:inherit; }
   margin:2.2rem 0 0.6rem;
 }
 .archive-section-title:first-of-type{ margin-top:0; }
+.archive-section-note{
+  font-family:var(--font-body);
+  font-weight:400;
+  font-size:0.85rem;
+  color:var(--ink-soft);
+}
 
 .archive-list{
   list-style:none;

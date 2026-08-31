@@ -1,16 +1,23 @@
 /* ================================================================
    THE ROUNDUP GAMES — CONFIG
    ----------------------------------------------------------------
-   This file is shared by every page (index.html, mini-crossword.html,
-   weekly-crossword.html, weekly-word-search.html, guess-the-teacher.html,
+   This file is shared by every page (index.html,
+   weekly-crossword.html, weekly-word-search.html,
    special-edition.html, bronco-dash.html, bronco-splash.html,
    bronco-blitz.html, archive.html) — so you only ever edit game content
    in ONE place.
 
+   RETIRED GAMES
+   -----------------------------------------------------------------
+   Daily Crossword and Guess the Teacher are no longer published.
+   Their pages, homepage cards, and nav links are gone as of v1.5.
+   DAILY_PUZZLES is kept only so every past entry stays playable in
+   the Archive (bottom of archive.html). Nothing needs to be added
+   to it anymore.
+
    HOW THIS WORKS NOW
    -----------------------------------------------------------------
-   Every daily puzzle (Daily Crossword + Guess the Teacher) lives in
-   ONE list: DAILY_PUZZLES. Every Weekly Crossword lives in ONE list:
+   Every Weekly Crossword + Weekly Word Search lives in ONE list:
    WEEKLY_PUZZLES. Past, present, and future puzzles all sit in the
    same list, in any order — there's no more manually cutting
    "today" into an archive.
@@ -57,12 +64,12 @@
 
    • TODAY_DATE — auto-generated from today's real date, shown in
      the header. No need to edit this.
-   • DAILY_PUZZLES — every Daily Crossword + Guess the Teacher, past/
-     present/future, in one list. See resolution rules above.
-   • WEEKLY_PUZZLES — every Weekly Crossword + Weekly Word Search,
-     same idea again — one shared weekly schedule, but the two games
-     stay fully separate (own difficulty, own theme, own archive,
-     own streak each).
+   • DAILY_PUZZLES — retired Daily Crossword + Guess the Teacher
+     entries, kept so they stay playable in the Archive only.
+   • WEEKLY_PUZZLES — every Weekly Crossword + Weekly Word Search:
+     one shared weekly schedule, but the two games stay fully
+     separate (own difficulty, own theme, own archive, own streak
+     each).
    • SPECIAL_PUZZLES — every Special Edition game, one entry per
      occasion, each with its own start/end date. See its own section
      below for details.
@@ -87,7 +94,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.4.4";
+const SITE_VERSION = "1.5";
 
 /* BUG REPORT FORM
    -----------------------------------------------------------------
@@ -105,11 +112,14 @@ const BUG_REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd06QWeyW1
 const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
 
 /* ----------------------------------------------------------------
-   DAILY PUZZLES — Daily Crossword + Guess the Teacher
+   DAILY PUZZLES — Daily Crossword + Guess the Teacher (RETIRED)
    ----------------------------------------------------------------
-   One object per day, any order, past/present/future all mixed
-   together — it's sorted out automatically (see the big note up
-   top). Each entry:
+   These two games are no longer published (v1.5). This list is
+   frozen — every entry still shows in the Archive so old puzzles
+   stay playable, but there's no reason to add new ones. The entry
+   shape is left documented below for reference only.
+
+   One object per day, any order. Each entry:
 
      isoDate  — "yyyy-mm-dd". This is what the site actually uses
                 to decide past vs. present vs. future. Get this
@@ -576,15 +586,9 @@ function resolveSpecialPuzzle(entries){
   return { current, archive };
 }
 
-/* Shown when a list has no entry dated today or earlier yet (e.g.
-   brand new site, or every entry you've added so far is a future
-   one). Keeps the rest of the page from breaking. */
-const FALLBACK_DAILY = {
-  isoDate: null,
-  date: "No puzzle published yet",
-  crossword: { difficulty: null, embedUrl: "" },
-  guessTheTeacher: null
-};
+/* Shown when WEEKLY_PUZZLES has no entry dated today or earlier yet
+   (e.g. brand new site, or every entry added so far is a future one).
+   Keeps the rest of the page from breaking. */
 const FALLBACK_WEEKLY = {
   isoDate: null,
   date: "No puzzle published yet",
@@ -592,9 +596,13 @@ const FALLBACK_WEEKLY = {
   wordSearch: { difficulty: null, theme: "", embedUrl: "" }
 };
 
+/* Daily Crossword + Guess the Teacher are retired (v1.5) — no "today"
+   for them anymore, so every non-future entry belongs in the Archive,
+   not just the ones older than the latest. */
 const DAILY_RESOLVED = resolvePuzzleSet(DAILY_PUZZLES);
-const TODAY = DAILY_RESOLVED.current || FALLBACK_DAILY;
-const ARCHIVE = DAILY_RESOLVED.archive;
+const DAILY_ARCHIVE = DAILY_RESOLVED.current
+  ? [...DAILY_RESOLVED.archive, DAILY_RESOLVED.current]
+  : [...DAILY_RESOLVED.archive];
 
 const WEEKLY_RESOLVED = resolvePuzzleSet(WEEKLY_PUZZLES);
 const THIS_WEEK = WEEKLY_RESOLVED.current || FALLBACK_WEEKLY;
@@ -608,13 +616,12 @@ const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
    GAMES LIST
    Controls the cards shown on the homepage. `href` is the page the
    Play button links to — add a new game by adding an entry here
-   and building its page the same way mini-crossword.html or
-   guess-the-teacher.html are built.
-   `date` is what shows on the card. The crossword and Guess the
-   Teacher cards default to TODAY.date above, so they stay in sync
-   automatically — you don't need to edit it here too. Leave `href`
-   as null for a game that isn't playable yet (like the placeholder
-   below) — it'll show as a quiet "coming soon" card with no link.
+   and building its page the same way weekly-crossword.html is built.
+   `date` is what shows on the card. The Weekly cards default to
+   THIS_WEEK.date above, so they stay in sync automatically — you
+   don't need to edit it here too. Leave `href` as null for a game
+   that isn't playable yet (like the placeholder below) — it'll show
+   as a quiet "coming soon" card with no link.
    `category` controls which homepage grid a card lands in —
    "daily" for the recurring/scheduled games (also where the
    "coming soon" placeholder lives, since it's about more of that
@@ -624,15 +631,6 @@ const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
    games change day-to-day and which don't.
    ---------------------------------------------------------------- */
 const GAMES = [
-  {
-    id: "mini-crossword",
-    title: "Daily Crossword",
-    blurb: "A fresh grid every school day — quotes, campus lingo, and the occasional Latin motto.",
-    date: TODAY.date,
-    difficulty: TODAY.crossword ? TODAY.crossword.difficulty : null,
-    href: "mini-crossword.html",
-    category: "daily"
-  },
   {
     id: "weekly-crossword",
     title: "Weekly Crossword",
@@ -649,15 +647,6 @@ const GAMES = [
     date: THIS_WEEK.date,
     difficulty: THIS_WEEK.wordSearch ? THIS_WEEK.wordSearch.difficulty : null,
     href: "weekly-word-search.html",
-    category: "daily"
-  },
-  {
-    id: "guess-teacher",
-    title: "Guess the Teacher",
-    blurb: "Three clues, hardest to easiest, three guesses. Can you name the faculty member?",
-    date: TODAY.date,
-    difficulty: TODAY.guessTheTeacher ? TODAY.guessTheTeacher.difficulty : null,
-    href: "guess-the-teacher.html",
     category: "daily"
   },
   {
@@ -1575,7 +1564,7 @@ function renderWeeklyWordSearchArchiveDetail(entry, detailEl){
 
 function renderArchive(){
   renderArchiveSection(
-    "archiveList", ARCHIVE, renderMiniCrosswordArchiveDetail,
+    "archiveList", DAILY_ARCHIVE, renderMiniCrosswordArchiveDetail,
     entry => entry.date
   );
 }

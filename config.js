@@ -378,8 +378,8 @@ const WEEKLY_PUZZLES = [
 
 const SPECIAL_PUZZLES = [
   {
-    startIsoDate: "2026-08-18",
-    endIsoDate: "2026-08-28",
+    startIsoDate: "2026-08-31",
+    endIsoDate: "2026-09-04",
     date: "First Week of Roundup Games",
     theme: "Welcome to The Roundup Games",
     difficulty: "3/5",

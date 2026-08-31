@@ -94,7 +94,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.5";
+const SITE_VERSION = "1.5.1";
 
 /* BUG REPORT FORM
    -----------------------------------------------------------------
@@ -112,145 +112,10 @@ const BUG_REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd06QWeyW1
 const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
 
 /* ----------------------------------------------------------------
-   DAILY PUZZLES — Daily Crossword + Guess the Teacher (RETIRED)
-   ----------------------------------------------------------------
-   These two games are no longer published (v1.5). This list is
-   frozen — every entry still shows in the Archive so old puzzles
-   stay playable, but there's no reason to add new ones. The entry
-   shape is left documented below for reference only.
-
-   One object per day, any order. Each entry:
-
-     isoDate  — "yyyy-mm-dd". This is what the site actually uses
-                to decide past vs. present vs. future. Get this
-                right or the whole thing shows on the wrong day.
-     date     — the display label shown to visitors, e.g.
-                "August 19, 2026". Typed by hand on purpose, so you
-                can customize it (e.g. "Homecoming Week Special")
-                — it does NOT have to match isoDate's format.
-     crossword.difficulty / .embedUrl
-     guessTheTeacher.difficulty / .answer / .clues
-   ---------------------------------------------------------------- */
-
-/* EXAMPLE FOR DAILY PUZZLES
-
-  {
-    isoDate: "",
-    date: "",
-    crossword: {
-      difficulty: "",
-      embedUrl: ""
-    },
-    guessTheTeacher: {
-      difficulty: "",
-      answer: "",
-      clues: [
-        "",
-        "",
-        ""
-      ]
-    }
-  },
-
-*/
-
-const DAILY_PUZZLES = [
-  {
-    isoDate: "2026-08-25",
-    date: "August 25, 2026",
-    crossword: {
-      difficulty: "2.5/5",
-      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug25&set=carter"
-    },
-    guessTheTeacher: {
-      difficulty: "2/5",
-      answer: "Mr. Ward",
-      clues: [
-        "This person knows pretty much everybody.",
-        "This faculty member deals with a lot of Brophy allumni.",
-        "This faculty member in the Admissions and Allumni Relations department."
-      ]
-    }
-  },
-  {
-    isoDate: "2026-08-24",
-    date: "August 24, 2026",
-    crossword: {
-      difficulty: "2/5",
-      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug24&set=carter"
-    },
-    guessTheTeacher: {
-      difficulty: "3/5",
-      answer: "Mr. Barton",
-      clues: [
-        "This teacher went to Brophy as a student not too long ago and was part of the Alumni Service Corps.",
-        "This teacher is in the religious studies department.",
-        "One of the classes he teaches is Freshman Scripture."
-      ]
-    }
-  },
-  {
-    isoDate: "2026-08-21",
-    date: "August 21, 2026",
-    crossword: {
-      difficulty: "3/5",
-      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug21&set=carter"
-    },
-    guessTheTeacher: {
-      difficulty: "2/5",
-      answer: "Sr. Leyba",
-      clues: [
-        "This teacher teaches a language class.",
-        "This teacher loves making kids now they are a star.",
-        "He teaches in Keating."
-      ]
-    }
-  },
-  {
-    isoDate: "2026-08-20",
-    date: "August 20, 2026",
-    crossword: {
-      difficulty: "3/5",
-      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug20&set=carter"
-    },
-    guessTheTeacher: {
-      difficulty: "2/5",
-      answer: "Mr. Middlemist",
-      clues: [
-        "This teacher's classroom is in 2F Eller.",
-        "This teacher loves sci-fi, Star Wars especially.",
-        "This teacher's department is English."
-      ]
-    }
-  },
-  {
-    isoDate: "2026-08-19",
-    date: "August 19, 2026",
-    crossword: {
-      difficulty: "2/5",
-      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug19&set=carter"
-    },
-    guessTheTeacher: {
-      difficulty: "3/5",
-      answer: "Mr. Lewkowitz",
-      clues: [
-        "This teacher is teaching an all-new class this year.",
-        "It's this teacher's first year here at Brophy.",
-        "This teacher works in the IC."
-      ]
-    }
-  }
-
-  // TO SCHEDULE A FUTURE DAY: add another object here with a
-  // later isoDate, e.g. "2026-08-20". It stays completely hidden
-  // — not shown as current, not in the archive — until that date
-  // actually arrives on the visitor's clock.
-];
-
-/* ----------------------------------------------------------------
    WEEKLY PUZZLES — Weekly Crossword + Weekly Word Search
    ----------------------------------------------------------------
-   Same idea as DAILY_PUZZLES above: one object per week, any order,
+   Same idea as DAILY_PUZZLES (now retired, moved to the bottom of
+   this file): one object per week, any order,
    past/present/future all mixed together. isoDate should be the
    Monday that week's puzzles go live. Each entry:
 
@@ -278,8 +143,8 @@ const DAILY_PUZZLES = [
    embed URL has been set for this edition yet." Leaving a key out
    entirely is also handled gracefully (same result), but sticking to
    the empty-object pattern keeps every entry's shape consistent and
-   easy to scan. Same idea applies to DAILY_PUZZLES above, for
-   `crossword` and `guessTheTeacher`.
+   easy to scan. Same idea applies to DAILY_PUZZLES (retired, at the
+   bottom of this file), for `crossword` and `guessTheTeacher`.
    ---------------------------------------------------------------- */
 
 /* EXAMPLE FOR WEEKLY PUZZLES
@@ -609,14 +474,6 @@ const FALLBACK_WEEKLY = {
   crossword: { difficulty: null, theme: "", embedUrl: "" },
   wordSearch: { difficulty: null, theme: "", embedUrl: "" }
 };
-
-/* Daily Crossword + Guess the Teacher are retired (v1.5) — no "today"
-   for them anymore, so every non-future entry belongs in the Archive,
-   not just the ones older than the latest. */
-const DAILY_RESOLVED = resolvePuzzleSet(DAILY_PUZZLES);
-const DAILY_ARCHIVE = DAILY_RESOLVED.current
-  ? [...DAILY_RESOLVED.archive, DAILY_RESOLVED.current]
-  : [...DAILY_RESOLVED.archive];
 
 const WEEKLY_RESOLVED = resolvePuzzleSet(WEEKLY_PUZZLES);
 const THIS_WEEK = WEEKLY_RESOLVED.current || FALLBACK_WEEKLY;
@@ -1294,14 +1151,6 @@ function migrateCrosswordWinIds(){
 
   if (changed) saveGameState(STATS_STORAGE_KEY, stats);
 }
-
-/* Run immediately (not gated behind DOMContentLoaded) — these are
-   pure localStorage operations with no DOM dependency, and need to
-   have already happened before any page-specific inline script
-   (e.g. stats.html's renderStatsPage()) reads stats, since that
-   script runs before DOMContentLoaded fires. */
-migrateCrosswordWinIds();
-backfillGuessTheTeacherWins();
 
 /* ---------- Guess the Teacher widget factory ----------
    `storageKey` should be a short unique string for this specific
@@ -2284,6 +2133,166 @@ function initBroncoBlitz(){
   startBtn.addEventListener("click", startGame);
   if (playAgainBtn) playAgainBtn.addEventListener("click", startGame);
 }
+
+/* ================================================================
+   RETIRED — DAILY CROSSWORD + GUESS THE TEACHER
+   ----------------------------------------------------------------
+   These games are no longer published (v1.5). Everything below is
+   kept only so past entries stay playable in the Archive. It sits
+   at the bottom of the file, out of the way of the live games.
+   ================================================================ */
+
+/* ----------------------------------------------------------------
+   DAILY PUZZLES — Daily Crossword + Guess the Teacher (RETIRED)
+   ----------------------------------------------------------------
+   These two games are no longer published (v1.5). This list is
+   frozen — every entry still shows in the Archive so old puzzles
+   stay playable, but there's no reason to add new ones. The entry
+   shape is left documented below for reference only.
+
+   One object per day, any order. Each entry:
+
+     isoDate  — "yyyy-mm-dd". This is what the site actually uses
+                to decide past vs. present vs. future. Get this
+                right or the whole thing shows on the wrong day.
+     date     — the display label shown to visitors, e.g.
+                "August 19, 2026". Typed by hand on purpose, so you
+                can customize it (e.g. "Homecoming Week Special")
+                — it does NOT have to match isoDate's format.
+     crossword.difficulty / .embedUrl
+     guessTheTeacher.difficulty / .answer / .clues
+   ---------------------------------------------------------------- */
+
+/* EXAMPLE FOR DAILY PUZZLES
+
+  {
+    isoDate: "",
+    date: "",
+    crossword: {
+      difficulty: "",
+      embedUrl: ""
+    },
+    guessTheTeacher: {
+      difficulty: "",
+      answer: "",
+      clues: [
+        "",
+        "",
+        ""
+      ]
+    }
+  },
+
+*/
+
+const DAILY_PUZZLES = [
+  {
+    isoDate: "2026-08-25",
+    date: "August 25, 2026",
+    crossword: {
+      difficulty: "2.5/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug25&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "2/5",
+      answer: "Mr. Ward",
+      clues: [
+        "This person knows pretty much everybody.",
+        "This faculty member deals with a lot of Brophy allumni.",
+        "This faculty member in the Admissions and Allumni Relations department."
+      ]
+    }
+  },
+  {
+    isoDate: "2026-08-24",
+    date: "August 24, 2026",
+    crossword: {
+      difficulty: "2/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug24&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "3/5",
+      answer: "Mr. Barton",
+      clues: [
+        "This teacher went to Brophy as a student not too long ago and was part of the Alumni Service Corps.",
+        "This teacher is in the religious studies department.",
+        "One of the classes he teaches is Freshman Scripture."
+      ]
+    }
+  },
+  {
+    isoDate: "2026-08-21",
+    date: "August 21, 2026",
+    crossword: {
+      difficulty: "3/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug21&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "2/5",
+      answer: "Sr. Leyba",
+      clues: [
+        "This teacher teaches a language class.",
+        "This teacher loves making kids now they are a star.",
+        "He teaches in Keating."
+      ]
+    }
+  },
+  {
+    isoDate: "2026-08-20",
+    date: "August 20, 2026",
+    crossword: {
+      difficulty: "3/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug20&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "2/5",
+      answer: "Mr. Middlemist",
+      clues: [
+        "This teacher's classroom is in 2F Eller.",
+        "This teacher loves sci-fi, Star Wars especially.",
+        "This teacher's department is English."
+      ]
+    }
+  },
+  {
+    isoDate: "2026-08-19",
+    date: "August 19, 2026",
+    crossword: {
+      difficulty: "2/5",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupaug19&set=carter"
+    },
+    guessTheTeacher: {
+      difficulty: "3/5",
+      answer: "Mr. Lewkowitz",
+      clues: [
+        "This teacher is teaching an all-new class this year.",
+        "It's this teacher's first year here at Brophy.",
+        "This teacher works in the IC."
+      ]
+    }
+  }
+
+  // TO SCHEDULE A FUTURE DAY: add another object here with a
+  // later isoDate, e.g. "2026-08-20". It stays completely hidden
+  // — not shown as current, not in the archive — until that date
+  // actually arrives on the visitor's clock.
+];
+
+/* Daily Crossword + Guess the Teacher are retired (v1.5) — no "today"
+   for them anymore, so every non-future entry belongs in the Archive,
+   not just the ones older than the latest. */
+const DAILY_RESOLVED = resolvePuzzleSet(DAILY_PUZZLES);
+const DAILY_ARCHIVE = DAILY_RESOLVED.current
+  ? [...DAILY_RESOLVED.archive, DAILY_RESOLVED.current]
+  : [...DAILY_RESOLVED.archive];
+
+/* Run immediately (not gated behind DOMContentLoaded) — these are
+   pure localStorage operations with no DOM dependency, and need to
+   have already happened before any page-specific inline script
+   (e.g. stats.html's renderStatsPage()) reads stats, since that
+   script runs before DOMContentLoaded fires. */
+migrateCrosswordWinIds();
+backfillGuessTheTeacherWins();
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("year") && (document.getElementById("year").textContent = new Date().getFullYear());

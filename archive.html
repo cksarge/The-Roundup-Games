@@ -29,10 +29,8 @@
       <div class="dateline__dropdown">
         <button type="button" class="dateline__dropdown-trigger">Games <span class="dateline__dropdown-caret">▾</span></button>
         <div class="dateline__dropdown-menu">
-          <a href="mini-crossword.html">Daily Crossword</a>
           <a href="weekly-crossword.html">Weekly Crossword</a>
           <a href="weekly-word-search.html">Weekly Word Search</a>
-          <a href="guess-the-teacher.html">Guess the Teacher</a>
           <a href="special-edition.html">Special Edition</a>
           <a href="bronco-dash.html">Bronco Dash</a>
           <a href="bronco-splash.html">Bronco Splash</a>
@@ -55,9 +53,6 @@
     <a class="hero__back" href="index.html">← Back to all games</a>
   </div>
 
-  <h2 class="archive-section-title">Daily Crossword &amp; Guess the Teacher</h2>
-  <ul class="archive-list" id="archiveList"></ul>
-
   <h2 class="archive-section-title">Weekly Crossword</h2>
   <ul class="archive-list" id="weeklyArchiveList"></ul>
 
@@ -66,6 +61,9 @@
 
   <h2 class="archive-section-title">Special Edition</h2>
   <ul class="archive-list" id="specialArchiveList"></ul>
+
+  <h2 class="archive-section-title">Daily Crossword &amp; Guess the Teacher <span class="archive-section-note">(retired — still playable here)</span></h2>
+  <ul class="archive-list" id="archiveList"></ul>
 </main>
 
 <footer>
@@ -77,6 +75,7 @@
 </footer>
 
 <script src="config.js"></script>
+<script src="embed.js"></script>
 <script>
   renderArchive();
   renderWeeklyArchive();

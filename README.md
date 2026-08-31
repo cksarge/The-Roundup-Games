@@ -6,8 +6,6 @@ Live features:
 
 - **Weekly Crossword** — a bigger, themed puzzle posted every Monday
 - **Weekly Word Search** — a themed word search posted every Monday, a fully separate game from Weekly Crossword with its own difficulty
-- **Daily Crossword** — a fresh grid every school day
-- **Guess the Teacher** — three clues (hardest to easiest), three guesses, name the faculty member
 - **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
 - **Bronco Dash** — a persistent (always-available, never-changing) side-scrolling track game. Answer trivia to sprint ahead; ticks drain on their own over time, so speed matters
 - **Bronco Splash** — a persistent swim-a-lap game. Answer trivia to refill your air and pick up speed before it runs out
@@ -15,6 +13,8 @@ Live features:
 - **Archive** — every past edition, auto-populated as new puzzles go live
 - **Stats** — how many times you've won each game, tracked in your own browser
 - More games planned — see the homepage's "Coming Soon" card
+
+**Retired (v1.5):** Daily Crossword and Guess the Teacher are no longer published. Their pages, homepage cards, and nav links are gone, but every past edition stays playable at the bottom of the Archive.
 
 ## How it works
 
@@ -26,20 +26,18 @@ This means you can:
 - **Fix a past puzzle** by editing its entry directly, no hunting through a separate archive file.
 - **Add embed links** for crosswords (`crossword.embedUrl`) and they show up automatically wherever that entry is displayed — today's page, the homepage card, or the archive.
 
-Weekly Crossword and Weekly Word Search share one list (`WEEKLY_PUZZLES`) and one weekly schedule — same idea as DAILY_PUZZLES bundling Daily Crossword + Guess the Teacher into one entry per day. Each week's entry has a `crossword` sub-object and a `wordSearch` sub-object, and the two stay fully separate games otherwise: their own difficulty, own embed, own Archive/Stats entry each. Both also support an optional `theme` field (`crossword.theme` / `wordSearch.theme`, independent of each other): unlike Special Edition, whose theme is the whole point of its prominent homepage banner, this one is deliberately low-key — it's never shown on the homepage card, only as a small line on that game's own page (and its Archive detail).
+Weekly Crossword and Weekly Word Search share one list (`WEEKLY_PUZZLES`) and one weekly schedule. Each week's entry has a `crossword` sub-object and a `wordSearch` sub-object, and the two stay fully separate games otherwise: their own difficulty, own embed, own Archive/Stats entry each. Both also support an optional `theme` field (`crossword.theme` / `wordSearch.theme`, independent of each other): unlike Special Edition, whose theme is the whole point of its prominent homepage banner, this one is deliberately low-key — it's never shown on the homepage card, only as a small line on that game's own page (and its Archive detail).
 
 Bronco Dash, Bronco Splash, and Bronco Blitz work differently — they're **persistent** games with no date logic at all (same game every time). All three draw from one shared question pool (`PERSISTENT_GAME_QUESTIONS` in `config.js`) in a random order every playthrough — add a question once and it's in the mix for every persistent game, current or future, no dates involved.
 
-See the comments at the top of `config.js` for the full breakdown of `DAILY_PUZZLES`, `WEEKLY_PUZZLES`, `PERSISTENT_GAME_QUESTIONS`, and `GAMES`.
+See the comments at the top of `config.js` for the full breakdown of `WEEKLY_PUZZLES`, `SPECIAL_PUZZLES`, `PERSISTENT_GAME_QUESTIONS`, and `GAMES`. (`DAILY_PUZZLES` is still there but frozen — it only feeds the retired games' Archive section now.)
 
 ## Project structure
 
 ```
 index.html               Homepage — game cards, pulled from GAMES in config.js
-mini-crossword.html       Today's Daily Crossword
 weekly-crossword.html     This week's Weekly Crossword
 weekly-word-search.html  This week's Weekly Word Search
-guess-the-teacher.html    Today's Guess the Teacher
 special-edition.html      The current Special Edition game (or a "nothing today" message)
 bronco-dash.html          Bronco Dash (persistent track game)
 bronco-splash.html        Bronco Splash (persistent swimming game)
@@ -48,6 +46,7 @@ archive.html              Past editions of every game
 stats.html                Per-browser win counts for each game
 404.html                  Shown for any URL that doesn't match a real page
 config.js                 All puzzle content + shared rendering logic
+embed.js                  Iframe auto-resize helper (only does anything when the site is framed)
 styles.css                Shared styling for every page
 logo.png / favicon.png / apple-touch-icon.png   Site branding
 ```
@@ -55,10 +54,53 @@ logo.png / favicon.png / apple-touch-icon.png   Site branding
 ## Editing content
 
 1. Open `config.js`.
-2. Add a new entry to `DAILY_PUZZLES` (for a Daily Crossword / Guess the Teacher day) or `WEEKLY_PUZZLES` (for a Weekly Crossword / Weekly Word Search week), following the example templates in the comments.
+2. Add a new entry to `WEEKLY_PUZZLES` (for a Weekly Crossword / Weekly Word Search week) or `SPECIAL_PUZZLES` (for a one-off Special Edition), following the example templates in the comments.
 3. Save. That's it — no rebuild, no redeploy step beyond pushing the file.
 
 The footer's version number (`SITE_VERSION` in `config.js`) is a manual label for tracking releases — it's bumped deliberately, not automatically.
+
+## Embedding the whole site in another page
+
+The site is designed to also run inside an `<iframe>` on another page (e.g. the Roundup's Student Newspaper Online / WordPress site). Every internal link is relative and opens in the same window, so all pages — home, each game, archive, stats — work normally inside the frame, and per-browser stats keep working (they're scoped to wherever this site is hosted, not the parent page).
+
+A cross-origin iframe can't resize itself to fit its content, so `embed.js` (loaded on every page) posts the page's height to the parent window whenever it changes. The parent page listens for that message and sets the iframe height. When the site is loaded directly, `embed.js` sees there's no parent frame and does nothing.
+
+### Adding it to a WordPress / SNO page
+
+1. In WordPress, create a **Page** (not a post). A full-width page template looks best.
+2. Add one **Custom HTML block** and paste the snippet below.
+3. Replace `GAMES_URL` with the live site URL and `GAMES_ORIGIN` with just its scheme + domain (no path).
+4. Publish, then add the page to the site menu.
+
+```html
+<iframe id="roundup-games"
+  src="GAMES_URL/index.html"
+  title="The Roundup Games"
+  style="width:100%;border:0;display:block"
+  scrolling="no"
+  allow="fullscreen"></iframe>
+<script>
+(function () {
+  var GAMES_ORIGIN = "GAMES_ORIGIN"; // e.g. https://cksarge.github.io
+  var frame = document.getElementById("roundup-games");
+  frame.style.height = "1200px"; // fallback until the first height message
+  window.addEventListener("message", function (e) {
+    if (e.origin !== GAMES_ORIGIN) return;
+    var d = e.data || {};
+    if (d.roundupGamesHeight) frame.style.height = d.roundupGamesHeight + "px";
+    // Optional: scroll the frame into view when the user navigates between games
+    if (d.roundupGamesNavigated !== undefined) {
+      frame.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  });
+})();
+</script>
+```
+
+Notes:
+- SNO's Custom HTML block allows the `<iframe>` and `<script>` above — same mechanism used for Google Forms / Spotify embeds.
+- GitHub Pages doesn't send a restrictive `X-Frame-Options` / `frame-ancestors`, so framing works with no change to this repo.
+- Drop the `roundupGamesNavigated` block if you don't want the page to scroll on in-frame navigation.
 
 ---
 
@@ -66,8 +108,9 @@ The footer's version number (`SITE_VERSION` in `config.js`) is a manual label fo
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
-### Unreleased
-
+### Version 1.5 — August 2026
+- **Retired Daily Crossword and Guess the Teacher.** Deleted `mini-crossword.html` and `guess-the-teacher.html`, removed their homepage cards (`GAMES` entries) and every nav-menu link to them. `DAILY_PUZZLES` is frozen but kept: `renderArchive` now shows *every* past entry (not just those older than the latest), and the "Daily Crossword & Guess the Teacher" section moved to the **bottom** of `archive.html` with a "retired — still playable here" note, so all old editions stay playable. Stats cards for both games are unchanged (archive wins still count). Removed the now-unused `TODAY` / `ARCHIVE` / `FALLBACK_DAILY` bindings.
+- Added `embed.js`, loaded on every page: when the site is running inside an `<iframe>` it posts its content height (and a navigation ping) to the parent window so the parent can size the frame to fit. Inert when the site is loaded directly. See "Embedding the whole site in another page" above for the parent-side snippet.
 
 ### Version 1.4.1 — August 2026
 - Fixed Weekly Word Search wins never being credited (and potentially the same for any other non-crossword embed, like Special Edition's Word Flower puzzles) — AmuseLabs sends some puzzle-player messages (`PUZZLE_LOAD`, `PUZZLE_COMPLETE`, `PUZZLE_PROGRESS`, ...) as a JSON *string* rather than an object, unlike its other messages (e.g. the AMP `embed-size` ping), and `initPuzzleCompletionListener` was reading `.id` straight off whatever arrived — silently returning early every time, since a string has no `.id` property. It now parses `event.data` first when it's a string. Found using a new on-page debug panel (`?debug=puzzle` on any puzzle-embed page) that logs every raw message AmuseLabs sends, built specifically to track this down and kept in the codebase for next time.

@@ -108,6 +108,9 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 1.5.1 — August 2026
+- Moved the retired `DAILY_PUZZLES` block — its documentation, the entry example, the array itself, and its dependent `DAILY_RESOLVED` / `DAILY_ARCHIVE` bindings plus the `migrateCrosswordWinIds()` / `backfillGuessTheTeacherWins()` run calls — to the **bottom** of `config.js`, so the top of the file is just the live games (Weekly, Special, persistent). No behavior change: the Archive still shows every past Daily Crossword / Guess the Teacher edition.
+
 ### Version 1.5 — August 2026
 - **Retired Daily Crossword and Guess the Teacher.** Deleted `mini-crossword.html` and `guess-the-teacher.html`, removed their homepage cards (`GAMES` entries) and every nav-menu link to them. `DAILY_PUZZLES` is frozen but kept: `renderArchive` now shows *every* past entry (not just those older than the latest), and the "Daily Crossword & Guess the Teacher" section moved to the **bottom** of `archive.html` with a "retired — still playable here" note, so all old editions stay playable. Stats cards for both games are unchanged (archive wins still count). Removed the now-unused `TODAY` / `ARCHIVE` / `FALLBACK_DAILY` bindings.
 - Added `embed.js`, loaded on every page: when the site is running inside an `<iframe>` it posts its content height (and a navigation ping) to the parent window so the parent can size the frame to fit. Inert when the site is loaded directly. See "Embedding the whole site in another page" above for the parent-side snippet.

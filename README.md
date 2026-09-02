@@ -12,7 +12,7 @@ Live features:
 - **Bronco Blitz** — a persistent 30-second trivia speed round. Answer A/B/C/D questions for 100 points each, times a streak multiplier that grows the longer your correct-answer streak runs, plus a speed bonus for fast answers; a wrong answer breaks the streak and locks you out for 3 seconds while the clock keeps running
 - **Archive** — every past edition, auto-populated as new puzzles go live
 - **Stats** — how many times you've won each game, tracked in your own browser
-- More games planned — see the homepage's "Coming Soon" card
+- More games planned — see the "Coming Soon" card on the Games page
 
 **Retired (v1.5):** Daily Crossword and Guess the Teacher are no longer published. Their pages, homepage cards, and nav links are gone, but every past edition stays playable at the bottom of the Archive.
 
@@ -35,7 +35,8 @@ See the comments at the top of `config.js` for the full breakdown of `WEEKLY_PUZ
 ## Project structure
 
 ```
-index.html               Homepage — game cards, pulled from GAMES in config.js
+index.html               Homepage — a hub linking to Games, Stats, and Archive (plus the Special Edition banner when one is live)
+games.html                The full games list — cards for every game, pulled from GAMES in config.js (what the homepage used to be)
 weekly-crossword.html     This week's Weekly Crossword
 weekly-word-search.html  This week's Weekly Word Search
 special-edition.html      The current Special Edition game (or a "nothing today" message)
@@ -61,7 +62,7 @@ The footer's version number (`SITE_VERSION` in `config.js`) is a manual label fo
 
 ## Embedding the whole site in another page
 
-The site is designed to also run inside an `<iframe>` on another page (e.g. the Roundup's Student Newspaper Online / WordPress site). Every internal link is relative and opens in the same window, so all pages — home, each game, archive, stats — work normally inside the frame, and per-browser stats keep working (they're scoped to wherever this site is hosted, not the parent page).
+The site is designed to also run inside an `<iframe>` on another page (e.g. the Roundup's Student Newspaper Online / WordPress site). Every internal link is relative and opens in the same window, so all pages — home, games, each game, archive, stats — work normally inside the frame, and per-browser stats keep working (they're scoped to wherever this site is hosted, not the parent page).
 
 A cross-origin iframe can't resize itself to fit its content, so `embed.js` (loaded on every page) posts the page's height to the parent window whenever it changes. The parent page listens for that message and sets the iframe height. When the site is loaded directly, `embed.js` sees there's no parent frame and does nothing.
 
@@ -107,6 +108,11 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 1.6 — September 2026
+- **Split the homepage into a hub + a dedicated Games page.** The old homepage (game cards for every game, split into "Today & This Week" and "Persistent Games" grids, with the Special Edition banner on top) now lives at **`games.html`**. `index.html` became a small hub: three `.game-card`s linking to **Games**, **Stats**, and **Archive**, rendered by a new `renderHomeCards()`. The only game content the homepage shows is the Special Edition banner, and only while one is live — when nothing is live the homepage shows no game content at all (`renderSpecialHomepageCard` already no-ops there, since the homepage has no persistent-games grid for its "nothing live" fallback card).
+- The nav "Games" dropdown trigger is now a real link to `games.html` (was an inert `<button>`), so clicking it navigates there from any page while hover/focus still opens the dropdown of individual games. `.dateline__dropdown-trigger` changed to `cursor:pointer` + `text-decoration:none` to match.
+- `renderGameCards()` (the per-game cards) is unchanged and now runs on `games.html` instead of `index.html`.
 
 ### Version 1.5.1 — August 2026
 - Moved the retired `DAILY_PUZZLES` block — its documentation, the entry example, the array itself, and its dependent `DAILY_RESOLVED` / `DAILY_ARCHIVE` bindings plus the `migrateCrosswordWinIds()` / `backfillGuessTheTeacherWins()` run calls — to the **bottom** of `config.js`, so the top of the file is just the live games (Weekly, Special, persistent). No behavior change: the Archive still shows every past Daily Crossword / Guess the Teacher edition.

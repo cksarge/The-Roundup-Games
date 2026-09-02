@@ -27,7 +27,7 @@
     <div class="dateline__nav">
       <a href="index.html" aria-current="page">Home</a>
       <div class="dateline__dropdown">
-        <button type="button" class="dateline__dropdown-trigger">Games <span class="dateline__dropdown-caret">▾</span></button>
+        <a href="games.html" class="dateline__dropdown-trigger">Games <span class="dateline__dropdown-caret">▾</span></a>
         <div class="dateline__dropdown-menu">
           <a href="weekly-crossword.html">Weekly Crossword</a>
           <a href="weekly-word-search.html">Weekly Word Search</a>
@@ -48,17 +48,13 @@
 <main class="shell">
   <div class="hero">
     <p class="hero__eyebrow">Brophy Roundup Games</p>
-    <h1>Today's puzzles</h1>
-    <p>Games and puzzles from the Roundup, new all school year long. Play today's lineup below, or dig through the archive for past editions.</p>
+    <h1>The Roundup Games</h1>
+    <p>Games and puzzles from the Roundup, new all school year long. Head to Games for the full lineup, check your Stats, or dig through the Archive for past editions.</p>
   </div>
 
   <div id="specialBanner"></div>
 
-  <div class="games-divider"><span>Today &amp; This Week</span></div>
-  <div class="games" id="dailyGameCards"></div>
-
-  <div class="games-divider"><span>Persistent Games — Always Available</span></div>
-  <div class="games" id="persistentGameCards"></div>
+  <div class="games" id="homeCards"></div>
 </main>
 
 <footer>
@@ -72,7 +68,7 @@
 <script src="config.js"></script>
 <script src="embed.js"></script>
 <script>
-  renderGameCards();
+  renderHomeCards();
   renderSpecialHomepageCard();
 </script>
 </body>

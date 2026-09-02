@@ -131,9 +131,10 @@ a{ color:inherit; }
   border-color:var(--gold-light);
 }
 
-/* "Games" dropdown — groups the four game pages. The trigger itself
-   is inert (no click behavior); hovering (or focusing, so it still
-   works via keyboard tab and on touch) reveals the menu. */
+/* "Games" dropdown — groups the game pages. The trigger is a link to
+   games.html (the full games list); hovering (or focusing, so it
+   still works via keyboard tab and on touch) reveals the menu of
+   individual games. */
 .dateline__dropdown{ position:relative; }
 .dateline__dropdown-trigger{
   background:none;
@@ -146,7 +147,8 @@ a{ color:inherit; }
   letter-spacing:0.08em;
   text-transform:uppercase;
   border-bottom:1px solid transparent;
-  cursor:default;
+  cursor:pointer;
+  text-decoration:none;
   transition:color .15s ease, border-color .15s ease;
 }
 .dateline__dropdown:hover .dateline__dropdown-trigger,

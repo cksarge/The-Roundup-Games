@@ -1,11 +1,11 @@
 /* ================================================================
    THE ROUNDUP GAMES — CONFIG
    ----------------------------------------------------------------
-   This file is shared by every page (index.html,
+   This file is shared by every page (index.html, games.html,
    weekly-crossword.html, weekly-word-search.html,
    special-edition.html, bronco-dash.html, bronco-splash.html,
-   bronco-blitz.html, archive.html) — so you only ever edit game content
-   in ONE place.
+   bronco-blitz.html, archive.html, stats.html) — so you only ever
+   edit game content in ONE place.
 
    RETIRED GAMES
    -----------------------------------------------------------------
@@ -75,7 +75,9 @@
      below for details.
    • PERSISTENT_GAME_QUESTIONS — the shared question pool for every
      persistent game. See its own section below.
-   • GAMES — controls the cards on the homepage.
+   • GAMES — controls the cards on the Games page (games.html).
+     The homepage itself just links to Games / Stats / Archive
+     (plus the Special Edition banner when one is live).
    • SITE_VERSION — shown in the footer. Bump it whenever you want.
    ================================================================ */
 
@@ -94,7 +96,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.5.1";
+const SITE_VERSION = "1.6";
 
 /* BUG REPORT FORM
    -----------------------------------------------------------------
@@ -485,7 +487,9 @@ const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
 
 /* ----------------------------------------------------------------
    GAMES LIST
-   Controls the cards shown on the homepage. `href` is the page the
+   Controls the cards shown on the Games page (games.html). The
+   homepage (index.html) no longer lists individual games — it just
+   links to Games / Stats / Archive. `href` is the page the
    Play button links to — add a new game by adding an entry here
    and building its page the same way weekly-crossword.html is built.
    `date` is what shows on the card. The Weekly cards default to
@@ -577,7 +581,50 @@ function normalizeAnswer(str){
     .trim();
 }
 
-/* ---------- homepage game cards ----------
+/* ---------- homepage hub cards (index.html only) ----------
+   The homepage isn't a games list anymore — it's a small hub with
+   three cards pointing at the Games, Stats, and Archive pages. The
+   full games lineup lives on games.html (renderGameCards below).
+   The only game content the homepage ever shows is the Special
+   Edition banner, and only while one is live — see
+   renderSpecialHomepageCard. */
+function renderHomeCards(){
+  const mount = document.getElementById("homeCards");
+  if (!mount) return;
+  const cards = [
+    {
+      title: "Games",
+      blurb: "The full lineup — this week's Weekly Crossword and Word Search, the always-available Bronco games, and any Special Edition that's live right now.",
+      href: "games.html",
+      cta: "Browse games →"
+    },
+    {
+      title: "Stats",
+      blurb: "How many times you've won each game, plus your current streak on the daily and weekly puzzles — tracked in your own browser.",
+      href: "stats.html",
+      cta: "View your stats →"
+    },
+    {
+      title: "Archive",
+      blurb: "Every past edition of the Roundup's games, in one place — going back to the start of the year.",
+      href: "archive.html",
+      cta: "Open the archive →"
+    }
+  ];
+  mount.innerHTML = "";
+  cards.forEach(c => {
+    const card = document.createElement("article");
+    card.className = "game-card";
+    card.innerHTML = `
+      <h2>${c.title}</h2>
+      <p>${c.blurb}</p>
+      <a class="btn" href="${c.href}">${c.cta}</a>
+    `;
+    mount.appendChild(card);
+  });
+}
+
+/* ---------- games page cards (games.html only) ----------
    Two separate grids — one for the recurring/scheduled games
    ("dailyGameCards"), one for the always-available persistent games
    ("persistentGameCards") — split by each GAMES entry's `category`,
@@ -792,12 +839,15 @@ if (location.search.indexOf("debug=puzzle") !== -1) {
   });
 }
 
-/* ---------- special edition homepage card (index.html only) ----------
-   Live: a large, prominent banner above the regular games grid.
-   Not live: a normal card at the very bottom of the persistent
-   games grid (right under Bronco Blitz), still linking to
-   special-edition.html (which explains there's nothing live right
-   now). */
+/* ---------- special edition card (index.html + games.html) ----------
+   Live: a large, prominent banner above the games grid. On the
+   homepage this banner is the ONLY game shown; when nothing is live
+   the homepage shows no game content at all.
+   Not live: on games.html only, a normal card at the very bottom of
+   the persistent games grid (right under Bronco Blitz), still
+   linking to special-edition.html (which explains there's nothing
+   live right now). The homepage has no such grid, so it simply
+   shows nothing. */
 function renderSpecialHomepageCard(){
   const bannerMount = document.getElementById("specialBanner");
   const gridMount = document.getElementById("persistentGameCards");

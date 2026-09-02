@@ -96,7 +96,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.6";
+const SITE_VERSION = "1.6.1";
 
 /* BUG REPORT FORM
    -----------------------------------------------------------------
@@ -406,6 +406,18 @@ const PERSISTENT_GAME_QUESTIONS = [
    need to touch this.
    ================================================================ */
 
+/* Internal preview switch. With "ignoresort=true" in the page URL's
+   query string, the date gates in the two resolvers below are
+   loosened so a puzzle scheduled for a future date (next week's
+   Weekly puzzle, an upcoming Special Edition) resolves as the
+   current one instead of staying hidden until its date arrives.
+   It's a spot-check aid for whoever is scheduling puzzles — off by
+   default, changes nothing about what a normal visitor sees, and
+   nothing on the site links to or mentions it. Streak/stat logic is
+   deliberately NOT affected (see getPublishedEntries), so a preview
+   visit can't credit a win for a puzzle that isn't really out yet. */
+const PREVIEW_UNRELEASED = location.search.indexOf("ignoresort=true") !== -1;
+
 /* Today's date as "yyyy-mm-dd", built from local date parts (not
    UTC) so it lines up with how isoDate is written above. */
 function getTodayIsoDate(){
@@ -431,11 +443,13 @@ function resolvePuzzleSet(entries){
   const archive = [];
 
   for (const entry of sorted) {
-    if (entry.isoDate <= todayIso) {
+    if (PREVIEW_UNRELEASED || entry.isoDate <= todayIso) {
       if (current) archive.push(current);
       current = entry;
     }
     // entry.isoDate > todayIso: a future puzzle — skip it entirely
+    // (unless PREVIEW_UNRELEASED is on, which lets the latest
+    //  scheduled entry surface as current for a spot-check)
   }
 
   return { current, archive };
@@ -456,11 +470,11 @@ function resolveSpecialPuzzle(entries){
   const archive = [];
 
   for (const entry of sorted) {
-    if (entry.startIsoDate > todayIso) continue; // hasn't started yet — invisible
+    if (!PREVIEW_UNRELEASED && entry.startIsoDate > todayIso) continue; // hasn't started yet — invisible
     if (entry.endIsoDate < todayIso) {
       archive.push(entry); // already over
     } else {
-      current = entry; // live today
+      current = entry; // live today (or, with PREVIEW_UNRELEASED, an upcoming one)
     }
   }
 

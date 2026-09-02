@@ -109,6 +109,9 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 1.6.1 — September 2026
+- Homepage hero eyebrow changed from "Brophy Roundup Games" to "Welcome to" (now reads "Welcome to" / "The Roundup Games").
+
 ### Version 1.6 — September 2026
 - **Split the homepage into a hub + a dedicated Games page.** The old homepage (game cards for every game, split into "Today & This Week" and "Persistent Games" grids, with the Special Edition banner on top) now lives at **`games.html`**. `index.html` became a small hub: three `.game-card`s linking to **Games**, **Stats**, and **Archive**, rendered by a new `renderHomeCards()`. The only game content the homepage shows is the Special Edition banner, and only while one is live — when nothing is live the homepage shows no game content at all (`renderSpecialHomepageCard` already no-ops there, since the homepage has no persistent-games grid for its "nothing live" fallback card).
 - The nav "Games" dropdown trigger is now a real link to `games.html` (was an inert `<button>`), so clicking it navigates there from any page while hover/focus still opens the dropdown of individual games. `.dateline__dropdown-trigger` changed to `cursor:pointer` + `text-decoration:none` to match.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Special Edition — The Roundup Games</title>
+<title>About — The Roundup Games</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,11 +27,11 @@
     <div class="dateline__nav">
       <a href="index.html">Home</a>
       <div class="dateline__dropdown">
-        <a href="games.html" class="dateline__dropdown-trigger is-active">Games <span class="dateline__dropdown-caret">▾</span></a>
+        <a href="games.html" class="dateline__dropdown-trigger">Games <span class="dateline__dropdown-caret">▾</span></a>
         <div class="dateline__dropdown-menu">
           <a href="weekly-crossword.html">Weekly Crossword</a>
           <a href="weekly-word-search.html">Weekly Word Search</a>
-          <a href="special-edition.html" aria-current="page">Special Edition</a>
+          <a href="special-edition.html">Special Edition</a>
           <a href="bronco-dash.html">Bronco Dash</a>
           <a href="bronco-splash.html">Bronco Splash</a>
           <a href="bronco-blitz.html">Bronco Blitz</a>
@@ -39,7 +39,7 @@
       </div>
       <a href="archive.html">Archive</a>
       <a href="stats.html">Stats</a>
-      <a href="about.html">About</a>
+      <a href="about.html" aria-current="page">About</a>
       <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Roundup Home ↗</a>
       <a href="https://www.brophyprep.org/" target="_blank" rel="noopener">Brophy Home ↗</a>
     </div>
@@ -48,19 +48,24 @@
 
 <main class="shell">
   <div class="hero">
-    <p class="hero__eyebrow">Special Edition</p>
-    <h1 id="specialTitle">Special Edition</h1>
-    <p id="specialDesc">A one-off game for school breaks and special occasions.</p>
-    <a class="hero__back" href="index.html">← Back to all games</a>
+    <p class="hero__eyebrow">About</p>
+    <h1>About The Roundup Games</h1>
+    <p>Who makes The Roundup Games, how it comes together, and how to get in touch.</p>
+    <a class="hero__back" href="index.html">← Back to homepage</a>
   </div>
 
   <div class="panel">
     <div class="panel__head">
-      <h2 id="specialPanelHeading">Play</h2>
-      <span class="panel__date" id="specialDate"></span>
+      <h2>About</h2>
     </div>
     <div class="panel__body">
-      <div class="crossword-frame-wrap" id="specialFrameWrap" data-stats-category="specialEdition"></div>
+      <div class="about-prose">
+        <p><strong>Welcome to The Roundup Games, the student-run games section of Brophy's student newspaper The Roundup.</strong> Each crossword and word search is made and edited by humans, and all of the questions in the three always available games has been made and reviewed by humans as well.</p>
+        <p>Similar to The Roundup's newspaper portion, any opinions represented on The Roundup's platforms are those of the student authors and do not reflect the views of any faculty, the Brophy administration, or Brophy College Preparatory.</p>
+        <p>All original content on The Roundup Games is made by Carter Kasarjian '30, staff writer for The Roundup Club, and edited by Nathan Bass '27, the entertainment editor for The Roundup.</p>
+        <p>The Roundup and The Roundup Games is a student publication of Brophy College Preparatory. Copyright 2026 Brophy College Preparatory's The Roundup. No material may be used without permission from the editors and adviser. Contact the editors of The Roundup Games via the <a href="report-bug.html">bug report and contact form</a>, or contact the editors and adviser of The Roundup directly at <a href="mailto:roundup@brophybroncos.org">roundup@brophybroncos.org</a>.</p>
+        <p>Enjoy!</p>
+      </div>
     </div>
   </div>
 </main>
@@ -75,8 +80,5 @@
 
 <script src="config.js"></script>
 <script src="embed.js"></script>
-<script>
-  renderSpecialEditionPage();
-</script>
 </body>
 </html>

@@ -529,6 +529,25 @@ a{ color:inherit; }
    the form is longer than this, so it doesn't need to fit exactly */
 .form-frame-wrap iframe{ height:450px; }
 
+/* about.html — running prose inside a .panel */
+.about-prose{
+  display:flex;
+  flex-direction:column;
+  gap:1.1rem;
+  max-width:68ch;
+  color:var(--ink-soft);
+  font-size:1rem;
+  line-height:1.65;
+}
+.about-prose p{ margin:0; }
+.about-prose strong{ color:var(--maroon-900); font-weight:600; }
+.about-prose a{
+  color:var(--maroon-800);
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+.about-prose a:hover{ color:var(--gold-dim); }
+
 /* ============================================================
    GUESS THE TEACHER widget
    ============================================================ */

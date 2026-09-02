@@ -529,12 +529,11 @@ a{ color:inherit; }
    the form is longer than this, so it doesn't need to fit exactly */
 .form-frame-wrap iframe{ height:450px; }
 
-/* about.html — running prose inside a .panel */
+/* about.html — running prose inside a .panel (fills the card width) */
 .about-prose{
   display:flex;
   flex-direction:column;
   gap:1.1rem;
-  max-width:68ch;
   color:var(--ink-soft);
   font-size:1rem;
   line-height:1.65;

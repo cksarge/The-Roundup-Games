@@ -137,6 +137,7 @@ a{ color:inherit; }
    individual games. */
 .dateline__dropdown{ position:relative; }
 .dateline__dropdown-trigger{
+  display:inline-block;
   background:none;
   border:none;
   margin:0;

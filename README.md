@@ -35,8 +35,9 @@ See the comments at the top of `config.js` for the full breakdown of `WEEKLY_PUZ
 ## Project structure
 
 ```
-index.html               Homepage — a hub linking to Games, Stats, and Archive (plus the Special Edition banner when one is live)
+index.html               Homepage — a hub linking to Games, Stats, Archive, and About (plus the Special Edition banner when one is live)
 games.html                The full games list — cards for every game, pulled from GAMES in config.js (what the homepage used to be)
+about.html                About page — who makes The Roundup Games, the opinions/copyright notice, and how to get in touch
 weekly-crossword.html     This week's Weekly Crossword
 weekly-word-search.html  This week's Weekly Word Search
 special-edition.html      The current Special Edition game (or a "nothing today" message)
@@ -45,6 +46,7 @@ bronco-splash.html        Bronco Splash (persistent swimming game)
 bronco-blitz.html         Bronco Blitz (persistent trivia speed round)
 archive.html              Past editions of every game
 stats.html                Per-browser win counts for each game
+report-bug.html           "Bug Report / Contact" — embeds the Google Form used for bug reports and for contacting the editors (BUG_REPORT_FORM_URL in config.js)
 404.html                  Shown for any URL that doesn't match a real page
 config.js                 All puzzle content + shared rendering logic
 embed.js                  Iframe auto-resize helper (only does anything when the site is framed)
@@ -108,6 +110,10 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 1.7 — September 2026
+- **New About page (`about.html`)** — who makes The Roundup Games, the opinions/copyright notice, and how to get in touch. Linked from a 4th homepage hub card (added to `renderHomeCards()`) and from a new **About** item in every page's nav, placed between Stats and "Roundup Home ↗".
+- **Renamed the bug report page to "Bug Report / Contact"** in every mention — the footer link on every page, and `report-bug.html`'s own title/heading/intro — since the same Google Form will double as a general contact form for the editors. The filename stays `report-bug.html` so existing links don't break.
 
 ### Version 1.6.1 — September 2026
 - Homepage hero eyebrow changed from "Brophy Roundup Games" to "Welcome to" (now reads "Welcome to" / "The Roundup Games").

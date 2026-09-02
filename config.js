@@ -4,8 +4,9 @@
    This file is shared by every page (index.html, games.html,
    weekly-crossword.html, weekly-word-search.html,
    special-edition.html, bronco-dash.html, bronco-splash.html,
-   bronco-blitz.html, archive.html, stats.html) — so you only ever
-   edit game content in ONE place.
+   bronco-blitz.html, archive.html, stats.html, about.html,
+   report-bug.html) — so you only ever edit game content in ONE
+   place.
 
    RETIRED GAMES
    -----------------------------------------------------------------
@@ -96,11 +97,13 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.6.1";
+const SITE_VERSION = "1.7";
 
-/* BUG REPORT FORM
+/* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
-   The embed link for the Google Form on report-bug.html. Create the
+   The embed link for the Google Form on report-bug.html (the "Bug
+   Report / Contact" page — it's used both for bug reports and for
+   contacting the editors). Create the
    form at forms.google.com, then Send → the embed icon (< >) → copy
    the URL inside that code's src="...". Paste it here between the
    quotes. Leave it as "" and the page will show a "not set up yet"
@@ -597,7 +600,7 @@ function normalizeAnswer(str){
 
 /* ---------- homepage hub cards (index.html only) ----------
    The homepage isn't a games list anymore — it's a small hub with
-   three cards pointing at the Games, Stats, and Archive pages. The
+   cards pointing at the Games, Stats, Archive, and About pages. The
    full games lineup lives on games.html (renderGameCards below).
    The only game content the homepage ever shows is the Special
    Edition banner, and only while one is live — see
@@ -623,6 +626,12 @@ function renderHomeCards(){
       blurb: "Every past edition of the Roundup's games, in one place — going back to the start of the year.",
       href: "archive.html",
       cta: "Open the archive →"
+    },
+    {
+      title: "About",
+      blurb: "Who makes The Roundup Games, how the puzzles and questions come together, and how to get in touch.",
+      href: "about.html",
+      cta: "Read about us →"
     }
   ];
   mount.innerHTML = "";
@@ -707,18 +716,19 @@ function renderWordSearch(mountId, dateId, data, dateLabel){
   wrap.innerHTML = `<iframe src="${data.wordSearch.embedUrl}" title="Weekly word search — ${dateLabel || ""}" loading="lazy"></iframe>`;
 }
 
-/* ---------- bug report form embed (report-bug.html only) ----------
+/* ---------- bug report / contact form embed (report-bug.html only) --
    Reads BUG_REPORT_FORM_URL/BUG_REPORT_FORM_LINK above rather than
    taking them as arguments — unlike the puzzle embeds, there's only
-   ever one of these, so there's no per-call data to pass in. */
+   ever one of these, so there's no per-call data to pass in. The
+   same form doubles as the general contact form for the editors. */
 function renderBugReportForm(){
   const wrap = document.getElementById("bugReportFrameWrap");
   const noteEl = document.getElementById("bugReportFallbackNote");
   if (wrap) {
     if (!BUG_REPORT_FORM_URL) {
-      wrap.innerHTML = `<div class="crossword-fallback">The bug report form hasn't been set up yet.</div>`;
+      wrap.innerHTML = `<div class="crossword-fallback">The bug report / contact form hasn't been set up yet.</div>`;
     } else {
-      wrap.innerHTML = `<iframe src="${BUG_REPORT_FORM_URL}" title="Bug report form" loading="lazy">Loading…</iframe>`;
+      wrap.innerHTML = `<iframe src="${BUG_REPORT_FORM_URL}" title="Bug report / contact form" loading="lazy">Loading…</iframe>`;
     }
   }
   if (noteEl) {

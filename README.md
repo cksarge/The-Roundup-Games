@@ -111,6 +111,10 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 1.7.1 — September 2026
+- Removed the **Daily Crossword** and **Guess the Teacher** cards from the Stats page (both games are retired). Their `STAT_GAMES` entries now carry a `retired: true` flag and `renderStatsPage()` filters those out — the win/streak plumbing still runs for archive play, only the Stats page cards are gone.
+- Also: masthead subline is now "Puzzles by Carter Kasarjian • New Games Every School Week"; footer credit line is now "© \<year\> Brophy College Preparatory's The Roundup • Version \<x\>".
+
 ### Version 1.7 — September 2026
 - **New About page (`about.html`)** — who makes The Roundup Games, the opinions/copyright notice, and how to get in touch. Linked from a 4th homepage hub card (added to `renderHomeCards()`) and from a new **About** item in every page's nav, placed between Stats and "Roundup Home ↗".
 - **Renamed the bug report page to "Bug Report / Contact"** in every mention — the footer link on every page, and `report-bug.html`'s own title/heading/intro — since the same Google Form will double as a general contact form for the editors. The filename stays `report-bug.html` so existing links don't break.

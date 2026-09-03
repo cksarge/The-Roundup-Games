@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.7";
+const SITE_VERSION = "1.7.1";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -976,13 +976,18 @@ function escapeHtml(str){
    Blitz) tracks both a lifetime point total (stats.points — every
    round played adds to this, see addPoints) and a single-round high
    score (stats.bestScores — only the best round ever, see
-   recordBestScore), shown as two separate stats rather than one. */
+   recordBestScore), shown as two separate stats rather than one.
+
+   `retired` marks the two retired games (Daily Crossword, Guess the
+   Teacher). They stay in this list so archive play still records
+   their wins / streaks through the same plumbing, but renderStatsPage
+   filters them out so they no longer get a card on the Stats page. */
 const STATS_STORAGE_KEY = "roundup:stats";
 const STAT_GAMES = [
-  { id: "miniCrossword", label: "Daily Crossword", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "miniCrossword", label: "Daily Crossword", retired: true, streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "weeklyWordSearch", label: "Weekly Word Search", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
-  { id: "guessTheTeacher", label: "Guess the Teacher", streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "guessTheTeacher", label: "Guess the Teacher", retired: true, streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "broncoDash", label: "Bronco Dash", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false },
   { id: "broncoSplash", label: "Bronco Splash", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false },
@@ -1543,7 +1548,8 @@ function renderSpecialArchive(){
 }
 
 /* ---------- stats page (stats.html only) ----------
-   One card per game (STAT_GAMES entry), each listing only the stats
+   One card per non-retired game (STAT_GAMES entry without `retired`),
+   each listing only the stats
    that apply to it — a crossword-type game shows Wins/Streak, a
    persistent race/swim game shows Wins (if tracked) and Fastest
    time, and Bronco Blitz shows High Score and Lifetime Total as two
@@ -1552,7 +1558,7 @@ function renderStatsPage(){
   const mount = document.getElementById("statsList");
   if (!mount) return;
 
-  mount.innerHTML = STAT_GAMES.map(game => {
+  mount.innerHTML = STAT_GAMES.filter(game => !game.retired).map(game => {
     const stats = [];
 
     if (game.trackWins) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bug Report / Contact — The Roundup Games</title>
+<title>Print Edition Crossword — The Roundup Games</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,12 +27,12 @@
     <div class="dateline__nav">
       <a href="index.html">Home</a>
       <div class="dateline__dropdown">
-        <a href="games.html" class="dateline__dropdown-trigger">Games <span class="dateline__dropdown-caret">▾</span></a>
+        <a href="games.html" class="dateline__dropdown-trigger is-active">Games <span class="dateline__dropdown-caret">▾</span></a>
         <div class="dateline__dropdown-menu">
           <a href="weekly-crossword.html">Weekly Crossword</a>
           <a href="weekly-word-search.html">Weekly Word Search</a>
           <a href="special-edition.html">Special Edition</a>
-          <a href="print-edition.html">Print Edition</a>
+          <a href="print-edition.html" aria-current="page">Print Edition</a>
           <a href="bronco-dash.html">Bronco Dash</a>
           <a href="bronco-splash.html">Bronco Splash</a>
           <a href="bronco-blitz.html">Bronco Blitz</a>
@@ -49,21 +49,22 @@
 
 <main class="shell">
   <div class="hero">
-    <p class="hero__eyebrow">Bugs &amp; Feedback</p>
-    <h1>Bug Report / Contact</h1>
-    <p>Ran into a glitch, a puzzle that won't load, or something that just looks off? Or want to get in touch with the editors about anything else? Use the form below.</p>
+    <p class="hero__eyebrow">From the Print Edition</p>
+    <h1>Print Edition Crossword</h1>
+    <p>The crossword from the latest print issue of The Roundup — a new one about five times a school year.</p>
+    <div id="printCrosswordThemeMount"></div>
     <a class="hero__back" href="index.html">← Back to all games</a>
   </div>
 
   <div class="panel">
     <div class="panel__head">
-      <h2>Bug Report / Contact Form</h2>
+      <h2>Latest Print Edition Crossword</h2>
+      <span class="panel__date" id="printCrosswordDate"></span>
     </div>
     <div class="panel__body">
-      <div class="crossword-frame-wrap form-frame-wrap" id="bugReportFrameWrap"></div>
+      <div class="crossword-frame-wrap" id="printCrosswordFrameWrap" data-stats-category="printCrossword"></div>
     </div>
   </div>
-  <p class="stats-note" id="bugReportFallbackNote"></p>
 </main>
 
 <footer>
@@ -77,7 +78,8 @@
 <script src="config.js"></script>
 <script src="embed.js"></script>
 <script>
-  renderBugReportForm();
+  document.getElementById("printCrosswordThemeMount").innerHTML = themeLineHtml(THIS_PRINT.crossword ? THIS_PRINT.crossword.theme : "");
+  renderCrossword("printCrosswordFrameWrap", "printCrosswordDate", THIS_PRINT, withDifficulty(THIS_PRINT.date, THIS_PRINT.crossword ? THIS_PRINT.crossword.difficulty : null));
 </script>
 </body>
 </html>

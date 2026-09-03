@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.7.1";
+const SITE_VERSION = "1.8";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -279,6 +279,62 @@ const SPECIAL_PUZZLES = [
     difficulty: "3/5",
     embedUrl: "https://puzzleme.amuselabs.com/pmm/wordf?id=roundupspecial1&set=carter"
   }
+];
+
+/* ----------------------------------------------------------------
+   PRINT EDITION CROSSWORD — the crossword from the paper's print run
+   ----------------------------------------------------------------
+   The Roundup prints roughly five times a school year, and each
+   print issue carries a crossword. This list is that crossword,
+   put online. It works exactly like WEEKLY_PUZZLES above (rolling
+   forward — the entry with the LATEST isoDate that isn't in the
+   future is "current," everything older slides into the Archive,
+   anything future stays invisible until its date arrives) — just on
+   a much slower, ~5x-a-year cadence instead of weekly. There's no
+   streak on it (see STAT_GAMES below): the print issues don't come
+   out on a regular enough schedule for "consecutive" to mean much,
+   same reasoning as Special Edition.
+
+   To publish a new print edition's crossword, add ONE entry here
+   with that issue's isoDate. It'll sit hidden until that date
+   arrives, then automatically become the current one (and whatever
+   was showing slides into the Archive). To fix a past one, edit its
+   entry in place.
+
+   Each entry:
+     isoDate  — "yyyy-mm-dd". The day this print edition's crossword
+                goes live online (usually the print issue's date).
+     date     — the display label shown to visitors, e.g.
+                "Fall Print Edition — October 2026". Typed by hand,
+                doesn't have to match isoDate's format.
+     crossword.difficulty — e.g. "3/5". Optional — leave "" to skip.
+     crossword.theme      — optional; leave "" to skip. Shown only as
+                            a small line on the Print Edition page
+                            and its Archive detail (same low-key
+                            treatment as the Weekly puzzles' themes,
+                            never on a homepage-style banner).
+     crossword.embedUrl   — the embed link. Create the puzzle at
+                            puzzleme.amuselabs.com, then copy the
+                            player URL here. Leave "" and the page
+                            shows a "no embed set yet" message.
+   ---------------------------------------------------------------- */
+
+/* EXAMPLE FOR PRINT EDITION
+
+  {
+    isoDate: "",
+    date: "",
+    crossword: {
+      difficulty: "",
+      theme: "",
+      embedUrl: ""
+    }
+  },
+
+*/
+
+const PRINT_PUZZLES = [
+
 ];
 
 /* ----------------------------------------------------------------
@@ -494,6 +550,14 @@ const FALLBACK_WEEKLY = {
   wordSearch: { difficulty: null, theme: "", embedUrl: "" }
 };
 
+/* Same idea as FALLBACK_WEEKLY, for the Print Edition crossword when
+   PRINT_PUZZLES has no entry dated today or earlier yet. */
+const FALLBACK_PRINT = {
+  isoDate: null,
+  date: "No print edition published yet",
+  crossword: { difficulty: null, theme: "", embedUrl: "" }
+};
+
 const WEEKLY_RESOLVED = resolvePuzzleSet(WEEKLY_PUZZLES);
 const THIS_WEEK = WEEKLY_RESOLVED.current || FALLBACK_WEEKLY;
 const WEEKLY_ARCHIVE = WEEKLY_RESOLVED.archive;
@@ -501,6 +565,12 @@ const WEEKLY_ARCHIVE = WEEKLY_RESOLVED.archive;
 const SPECIAL_RESOLVED = resolveSpecialPuzzle(SPECIAL_PUZZLES);
 const SPECIAL_EDITION = SPECIAL_RESOLVED.current; // null when nothing is live today
 const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
+
+/* Print Edition crossword — rolls forward exactly like WEEKLY above,
+   just on the paper's ~5x-a-year print cadence. */
+const PRINT_RESOLVED = resolvePuzzleSet(PRINT_PUZZLES);
+const THIS_PRINT = PRINT_RESOLVED.current || FALLBACK_PRINT;
+const PRINT_ARCHIVE = PRINT_RESOLVED.archive;
 
 /* ----------------------------------------------------------------
    GAMES LIST
@@ -510,15 +580,15 @@ const SPECIAL_ARCHIVE = SPECIAL_RESOLVED.archive;
    Play button links to — add a new game by adding an entry here
    and building its page the same way weekly-crossword.html is built.
    `date` is what shows on the card. The Weekly cards default to
-   THIS_WEEK.date above, so they stay in sync automatically — you
-   don't need to edit it here too. Leave `href` as null for a game
-   that isn't playable yet (like the placeholder below) — it'll show
-   as a quiet "coming soon" card with no link.
+   THIS_WEEK.date above, and the Print Edition card to THIS_PRINT.date,
+   so they stay in sync automatically — you don't need to edit it here
+   too. Leave `href` as null for a game that isn't playable yet — it'll
+   show as a quiet "coming soon" card with no link (nothing uses that
+   right now, but renderGameCards still handles it).
    `category` controls which homepage grid a card lands in —
-   "daily" for the recurring/scheduled games (also where the
-   "coming soon" placeholder lives, since it's about more of that
-   kind of content), "persistent" for the always-available games
-   (Bronco Dash/Splash/Blitz). renderGameCards splits on this field
+   "daily" for the recurring/scheduled games (Weekly Crossword,
+   Weekly Word Search, Print Edition Crossword), "persistent" for the
+   always-available games (Bronco Dash/Splash/Blitz). renderGameCards splits on this field
    and a divider is shown between the two grids so it's clear which
    games change day-to-day and which don't.
    ---------------------------------------------------------------- */
@@ -569,12 +639,12 @@ const GAMES = [
     category: "persistent"
   },
   {
-    id: "coming-soon",
-    title: "More Games Coming Soon",
-    blurb: "We're building out the rest of the puzzle page. Check back for new additions.",
-    date: null,
-    difficulty: null,
-    href: null,
+    id: "print-edition",
+    title: "Print Edition Crossword",
+    blurb: "The crossword from the latest print issue of The Roundup — a new one about five times a school year.",
+    date: THIS_PRINT.date,
+    difficulty: THIS_PRINT.crossword ? THIS_PRINT.crossword.difficulty : null,
+    href: "print-edition.html",
     category: "daily"
   }
 ];
@@ -963,10 +1033,10 @@ function escapeHtml(str){
    decides which puzzles count as "still current" when they were won
    — see initPuzzleCompletionListener and mountTeacherGame's callers.
 
-   `streak` marks which categories get a streak at all — daily/weekly
-   games only, not Special Edition or the persistent games (none of
-   them run on a recurring schedule, so "consecutive" doesn't mean
-   anything for them).
+   `streak` marks which categories get a streak at all — the daily/weekly
+   games only, not the Print Edition Crossword, Special Edition, or the
+   persistent games (none of those run on a regular enough recurring
+   schedule for "consecutive" to mean anything).
 
    `trackWins` / `trackBestTime` / `trackPoints` / `trackBestScore`
    control what actually shows up on the Stats page for a category —
@@ -987,6 +1057,7 @@ const STAT_GAMES = [
   { id: "miniCrossword", label: "Daily Crossword", retired: true, streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "weeklyWordSearch", label: "Weekly Word Search", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "printCrossword", label: "Print Edition Crossword", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "guessTheTeacher", label: "Guess the Teacher", retired: true, streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "broncoDash", label: "Bronco Dash", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false },
@@ -1504,9 +1575,38 @@ function renderWeeklyWordSearchArchiveDetail(entry, detailEl){
   }
 }
 
+function renderPrintEditionArchiveDetail(entry, detailEl){
+  detailEl.innerHTML = `
+    <div class="panel">
+      <div class="panel__head">
+        <h2>Print Edition Crossword</h2>
+        <span class="panel__date">${withDifficulty(entry.date, entry.crossword && entry.crossword.difficulty)}</span>
+      </div>
+      <div class="panel__body">
+        ${themeLineHtml(entry.crossword && entry.crossword.theme)}
+        <div class="crossword-frame-wrap" id="printArchiveCrosswordWrap" data-stats-category="printCrossword" data-stats-win-id="${entry.isoDate}"></div>
+      </div>
+    </div>
+  `;
+
+  const wrap = document.getElementById("printArchiveCrosswordWrap");
+  if (!entry.crossword || !entry.crossword.embedUrl || entry.crossword.embedUrl.includes("REPLACE")) {
+    wrap.innerHTML = `<div class="crossword-fallback">No crossword embed URL was saved for this edition.</div>`;
+  } else {
+    wrap.innerHTML = `<iframe src="${entry.crossword.embedUrl}" title="Print Edition Crossword — ${entry.date}" loading="lazy"></iframe>`;
+  }
+}
+
 function renderArchive(){
   renderArchiveSection(
     "archiveList", DAILY_ARCHIVE, renderMiniCrosswordArchiveDetail,
+    entry => entry.date
+  );
+}
+
+function renderPrintArchive(){
+  renderArchiveSection(
+    "printArchiveList", PRINT_ARCHIVE, renderPrintEditionArchiveDetail,
     entry => entry.date
   );
 }

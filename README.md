@@ -6,13 +6,13 @@ Live features:
 
 - **Weekly Crossword** — a bigger, themed puzzle posted every Monday
 - **Weekly Word Search** — a themed word search posted every Monday, a fully separate game from Weekly Crossword with its own difficulty
+- **Print Edition Crossword** — the crossword from the paper's print run, put online. A new one roughly five times a school year; the latest one shows on its page and every older one moves to the Archive
 - **Special Edition** — a themed, one-off game slot for school breaks and special occasions (any embed type — crossword, spelling bee, etc.), live only for its own configured date range
 - **Bronco Dash** — a persistent (always-available, never-changing) side-scrolling track game. Answer trivia to sprint ahead; ticks drain on their own over time, so speed matters
 - **Bronco Splash** — a persistent swim-a-lap game. Answer trivia to refill your air and pick up speed before it runs out
 - **Bronco Blitz** — a persistent 30-second trivia speed round. Answer A/B/C/D questions for 100 points each, times a streak multiplier that grows the longer your correct-answer streak runs, plus a speed bonus for fast answers; a wrong answer breaks the streak and locks you out for 3 seconds while the clock keeps running
 - **Archive** — every past edition, auto-populated as new puzzles go live
 - **Stats** — how many times you've won each game, tracked in your own browser
-- More games planned — see the "Coming Soon" card on the Games page
 
 **Retired (v1.5):** Daily Crossword and Guess the Teacher are no longer published. Their pages, homepage cards, and nav links are gone, but every past edition stays playable at the bottom of the Archive.
 
@@ -28,9 +28,11 @@ This means you can:
 
 Weekly Crossword and Weekly Word Search share one list (`WEEKLY_PUZZLES`) and one weekly schedule. Each week's entry has a `crossword` sub-object and a `wordSearch` sub-object, and the two stay fully separate games otherwise: their own difficulty, own embed, own Archive/Stats entry each. Both also support an optional `theme` field (`crossword.theme` / `wordSearch.theme`, independent of each other): unlike Special Edition, whose theme is the whole point of its prominent homepage banner, this one is deliberately low-key — it's never shown on the homepage card, only as a small line on that game's own page (and its Archive detail).
 
+The Print Edition Crossword has its own list (`PRINT_PUZZLES`) that works exactly like `WEEKLY_PUZZLES` — the entry with the latest non-future `isoDate` is the current one, everything older moves to the Archive — just on the print run's much slower, ~5x-a-year cadence. To publish a new one, add a single entry with that issue's `isoDate` and its `crossword.embedUrl`. It tracks wins on the Stats page but has no streak (same reasoning as Special Edition — the print issues aren't on a regular enough schedule for "consecutive" to mean much).
+
 Bronco Dash, Bronco Splash, and Bronco Blitz work differently — they're **persistent** games with no date logic at all (same game every time). All three draw from one shared question pool (`PERSISTENT_GAME_QUESTIONS` in `config.js`) in a random order every playthrough — add a question once and it's in the mix for every persistent game, current or future, no dates involved.
 
-See the comments at the top of `config.js` for the full breakdown of `WEEKLY_PUZZLES`, `SPECIAL_PUZZLES`, `PERSISTENT_GAME_QUESTIONS`, and `GAMES`. (`DAILY_PUZZLES` is still there but frozen — it only feeds the retired games' Archive section now.)
+See the comments at the top of `config.js` for the full breakdown of `WEEKLY_PUZZLES`, `PRINT_PUZZLES`, `SPECIAL_PUZZLES`, `PERSISTENT_GAME_QUESTIONS`, and `GAMES`. (`DAILY_PUZZLES` is still there but frozen — it only feeds the retired games' Archive section now.)
 
 ## Project structure
 
@@ -40,6 +42,7 @@ games.html                The full games list — cards for every game, pulled f
 about.html                About page — who makes The Roundup Games, the opinions/copyright notice, and how to get in touch
 weekly-crossword.html     This week's Weekly Crossword
 weekly-word-search.html  This week's Weekly Word Search
+print-edition.html        The latest Print Edition Crossword
 special-edition.html      The current Special Edition game (or a "nothing today" message)
 bronco-dash.html          Bronco Dash (persistent track game)
 bronco-splash.html        Bronco Splash (persistent swimming game)
@@ -57,7 +60,7 @@ logo.png / favicon.png / apple-touch-icon.png   Site branding
 ## Editing content
 
 1. Open `config.js`.
-2. Add a new entry to `WEEKLY_PUZZLES` (for a Weekly Crossword / Weekly Word Search week) or `SPECIAL_PUZZLES` (for a one-off Special Edition), following the example templates in the comments.
+2. Add a new entry to `WEEKLY_PUZZLES` (for a Weekly Crossword / Weekly Word Search week), `PRINT_PUZZLES` (for a print edition's crossword), or `SPECIAL_PUZZLES` (for a one-off Special Edition), following the example templates in the comments.
 3. Save. That's it — no rebuild, no redeploy step beyond pushing the file.
 
 The footer's version number (`SITE_VERSION` in `config.js`) is a manual label for tracking releases — it's bumped deliberately, not automatically.
@@ -110,6 +113,11 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 1.8 — September 2026
+- Added the **Print Edition Crossword** (`print-edition.html`): the crossword from the paper's print run, put online. New list `PRINT_PUZZLES` in `config.js`, which rolls forward exactly like `WEEKLY_PUZZLES` (latest non-future `isoDate` is current, older ones move to the Archive) but on the print run's ~5x-a-year cadence. Same `crossword: { difficulty, theme, embedUrl }` sub-object shape as the Weekly crossword, so it reuses `renderCrossword` and the AmuseLabs `postMessage` win-detection plumbing unchanged. New `printCrossword` category in `STAT_GAMES` (wins only, no streak — same reasoning as Special Edition), a Stats page card, and a "Print Edition Crossword" section in the Archive (`renderPrintArchive` / `renderPrintEditionArchiveDetail`).
+- This **replaces the old "More Games Coming Soon" placeholder card** on the Games page — the `coming-soon` entry in `GAMES` is now the `print-edition` entry (still `category: "daily"`). `renderGameCards` still handles a `href: null` card, nothing uses that right now.
+- Added a **Print Edition** item to every page's nav "Games" dropdown, between Special Edition and Bronco Dash.
 
 ### Version 1.7.1 — September 2026
 - Removed the **Daily Crossword** and **Guess the Teacher** cards from the Stats page (both games are retired). Their `STAT_GAMES` entries now carry a `retired: true` flag and `renderStatsPage()` filters those out — the win/streak plumbing still runs for archive play, only the Stats page cards are gone.

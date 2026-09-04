@@ -12,7 +12,7 @@ Live features:
 - **Bronco Splash** — a persistent swim-a-lap game. Answer trivia to refill your air and pick up speed before it runs out
 - **Bronco Blitz** — a persistent 30-second trivia speed round. Answer A/B/C/D questions for 100 points each, times a streak multiplier that grows the longer your correct-answer streak runs, plus a speed bonus for fast answers; a wrong answer breaks the streak and locks you out for 3 seconds while the clock keeps running
 - **Archive** — every past edition, auto-populated as new puzzles go live
-- **Leaderboard & Stats** (`stats.html`) — your own win counts and streaks, tracked in your browser, plus a shared weekly **Leaderboard** (Supabase): high score for Bronco Blitz, fastest time for the other Bronco games, and fastest solve + longest streak for the Weekly Crossword / Word Search / Special Edition. Opt-in; keys live in `config.js` (see [Leaderboard (Supabase)](#leaderboard-supabase))
+- **Leaderboard & Stats** (`stats.html`) — your own win counts and streaks, tracked in your browser, plus a shared weekly **Leaderboard** (Supabase): Bronco Blitz high score **and** all-rounds-added-up total; fastest time for the other Bronco games; fastest solve for the Print Edition Crossword; fastest solve + longest streak for the Weekly Crossword / Word Search / Special Edition. Each has a this-week and an all-time view. Opt-in; keys live in `config.js` (see [Leaderboard (Supabase)](#leaderboard-supabase))
 - **Per-game cards** — under every game: a live "Your Stats" card that pops when a number goes up, and a "Share This Game" card with two links — *play the exact same set* (no score attached) and *challenge them* (with your score to beat)
 
 **Retired (v1.5):** Daily Crossword and Guess the Teacher are no longer published. Their pages, homepage cards, and nav links are gone, but every past edition stays playable at the bottom of the Archive.
@@ -125,7 +125,7 @@ create table if not exists public.scores (
   client_id    text not null default '',
   constraint scores_game_ok   check (game_id in (
                  'broncoBlitz','broncoDash','broncoSplash',
-                 'weeklyCrossword','weeklyWordSearch','specialEdition')),
+                 'weeklyCrossword','weeklyWordSearch','printCrossword','specialEdition')),
   constraint scores_board_ok  check (board in ('weekly','alltime')),
   constraint scores_metric_ok check (metric in ('score','time','streak')),
   constraint scores_value_ok  check (value >= 0 and value < 10000000),
@@ -142,12 +142,16 @@ create policy "public insert" on public.scores for insert to anon with check (tr
 -- no update/delete policy → the anon key can't change or remove rows (you can, from the dashboard)
 ```
 
-> Already created the table from an earlier version? Bring the two constraints up to date:
+> Already created the table from an earlier version? Bring the constraints up to date:
 > ```sql
 > alter table public.scores drop constraint scores_metric_ok,
 >   add constraint scores_metric_ok check (metric in ('score','time','streak'));
 > alter table public.scores drop constraint scores_grade_ok,
 >   add constraint scores_grade_ok check (grade in ('','27','28','29','30','31','32','33'));
+> alter table public.scores drop constraint scores_game_ok,
+>   add constraint scores_game_ok check (game_id in (
+>     'broncoBlitz','broncoDash','broncoSplash',
+>     'weeklyCrossword','weeklyWordSearch','printCrossword','specialEdition'));
 > ```
 
 ### Bad-name filter (the real moderation layer)
@@ -279,6 +283,17 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 2.0.4 — September 2026
+- **Print Edition Crossword** now has a leaderboard board — **Fastest solve**
+  (same solve-timing / first-completion freeze as the other puzzle games).
+- **Bronco Blitz got a second board — "Total (all rounds added up)"** — per
+  person, weekly or all-time. To feed it, Bronco Blitz now posts *every* round
+  (was one per week); the High score board still just takes the max.
+- `leaderboard.js` boards are now keyed by a `key` field (a game can have two
+  boards off the same stored `metric`), with an `agg` of `min` / `max` / `sum`.
+  New Supabase constraint value: add `printCrossword` to `scores_game_ok` (SQL in
+  the Leaderboard section).
 
 ### Version 2.0.3 — September 2026
 - **Bronco Blitz: each correct answer adds time to the clock** — `1s ×` the

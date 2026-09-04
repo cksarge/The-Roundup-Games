@@ -65,6 +65,7 @@
     </div>
     <div class="panel__body">
       <div class="crossword-frame-wrap" id="printCrosswordFrameWrap" data-stats-category="printCrossword"></div>
+      <div id="leaderboardSubmitMount"></div>
     </div>
   </div>
 
@@ -72,6 +73,8 @@
     <div id="gameStatsCardMount"></div>
     <div id="gameShareCardMount"></div>
   </div>
+
+  <div id="weeklyTop10Mount" class="weekly-top10"></div>
 </main>
 
 <footer>
@@ -83,11 +86,13 @@
 </footer>
 
 <script src="config.js"></script>
+<script src="leaderboard.js"></script>
 <script src="embed.js"></script>
 <script>
   document.getElementById("printCrosswordThemeMount").innerHTML = themeLineHtml(THIS_PRINT.crossword ? THIS_PRINT.crossword.theme : "");
   renderCrossword("printCrosswordFrameWrap", "printCrosswordDate", THIS_PRINT, withDifficulty(THIS_PRINT.date, THIS_PRINT.crossword ? THIS_PRINT.crossword.difficulty : null));
   mountGamePageCards("printCrossword");
+  lbAttachPuzzlePage("printCrossword");
 </script>
 </body>
 </html>

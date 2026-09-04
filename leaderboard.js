@@ -22,34 +22,44 @@
 
 const SB_BASE = (typeof SUPABASE_URL === "string" ? SUPABASE_URL : "").replace(/\/+$/, "");
 
+/* Each board: `key` (unique within a game — what the UI passes
+   around), `metric` (which stored rows it reads — a game can have
+   two boards off the same metric), `agg` ("max"/"min" via
+   best-first dedupe, or "sum" to add a person's rows up), `dir`
+   (sort), plus display `label`/`unit`. */
 const LEADERBOARD_GAMES = [
   { id: "broncoBlitz", label: "Bronco Blitz", kind: "bronco",
-    boards: [{ metric: "score", label: "High score", dir: "desc", unit: "pts" }] },
+    boards: [
+      { key: "score", metric: "score", agg: "max", label: "High score", dir: "desc", unit: "pts" },
+      { key: "scoreTotal", metric: "score", agg: "sum", label: "Total (all rounds added up)", dir: "desc", unit: "pts" }
+    ] },
   { id: "broncoDash", label: "Bronco Dash", kind: "bronco",
-    boards: [{ metric: "time", label: "Fastest run", dir: "asc" }] },
+    boards: [{ key: "time", metric: "time", agg: "min", label: "Fastest run", dir: "asc" }] },
   { id: "broncoSplash", label: "Bronco Splash", kind: "bronco",
-    boards: [{ metric: "time", label: "Fastest lap", dir: "asc" }] },
+    boards: [{ key: "time", metric: "time", agg: "min", label: "Fastest lap", dir: "asc" }] },
   { id: "weeklyCrossword", label: "Weekly Crossword", kind: "puzzle",
     boards: [
-      { metric: "time", label: "Fastest solve", dir: "asc" },
-      { metric: "streak", label: "Longest streak", dir: "desc", unit: "wks" }
+      { key: "time", metric: "time", agg: "min", label: "Fastest solve", dir: "asc" },
+      { key: "streak", metric: "streak", agg: "max", label: "Longest streak", dir: "desc", unit: "wks" }
     ] },
   { id: "weeklyWordSearch", label: "Weekly Word Search", kind: "puzzle",
     boards: [
-      { metric: "time", label: "Fastest solve", dir: "asc" },
-      { metric: "streak", label: "Longest streak", dir: "desc", unit: "wks" }
+      { key: "time", metric: "time", agg: "min", label: "Fastest solve", dir: "asc" },
+      { key: "streak", metric: "streak", agg: "max", label: "Longest streak", dir: "desc", unit: "wks" }
     ] },
+  { id: "printCrossword", label: "Print Edition Crossword", kind: "puzzle",
+    boards: [{ key: "time", metric: "time", agg: "min", label: "Fastest solve", dir: "asc" }] },
   { id: "specialEdition", label: "Special Edition", kind: "puzzle",
-    boards: [{ metric: "time", label: "Fastest solve", dir: "asc" }] }
+    boards: [{ key: "time", metric: "time", agg: "min", label: "Fastest solve", dir: "asc" }] }
 ];
 
 function lbGameConfig(gameId){
   return LEADERBOARD_GAMES.find(g => g.id === gameId) || null;
 }
-function lbBoardConfig(gameId, metric){
+function lbBoardConfig(gameId, key){
   const g = lbGameConfig(gameId);
   if (!g) return null;
-  return g.boards.find(b => b.metric === metric) || g.boards[0] || null;
+  return g.boards.find(b => b.key === key) || g.boards[0] || null;
 }
 
 /* ---------- name moderation (client side) ----------
@@ -211,12 +221,18 @@ function lbClientMetricsThisWeek(gameId){
     .catch(() => ({}));
 }
 
-/* GET one board. Resolves to rows { name, last_initial, grade, value },
-   sorted best-first and de-duplicated to one (best) row per person. */
-function lbFetchBoard(gameId, board, metric){
-  const bcfg = lbBoardConfig(gameId, metric);
+function lbPersonKey(row){
+  return (row.name || "").toLowerCase() + "|" + (row.last_initial || "").toLowerCase() + "|" + (row.grade || "");
+}
+/* GET one board's rows, resolved to ONE row per person:
+   agg "sum" adds all of a person's rows up; anything else keeps the
+   single best (rows come back sorted best-first, so first-seen wins).
+   Returns { name, last_initial, grade, value }, sorted for display. */
+function lbFetchBoard(gameId, board, key){
+  const bcfg = lbBoardConfig(gameId, key);
   if (!leaderboardEnabled() || !bcfg) return Promise.resolve([]);
   const wk = board === "alltime" ? "all" : isoWeekKey();
+  const isSum = bcfg.agg === "sum";
   const qs = [
     "select=name,last_initial,grade,value",
     "game_id=eq." + encodeURIComponent(gameId),
@@ -224,18 +240,30 @@ function lbFetchBoard(gameId, board, metric){
     "week_key=eq." + encodeURIComponent(wk),
     "metric=eq." + encodeURIComponent(bcfg.metric),
     "order=value." + (bcfg.dir || "desc"),
-    "limit=300"
+    "limit=" + (isSum ? 5000 : 300)
   ].join("&");
   return fetch(SB_BASE + "/rest/v1/scores?" + qs, { headers: lbHeaders() })
     .then(r => r.ok ? r.json() : [])
-    .then(rows => lbDedupePeople(Array.isArray(rows) ? rows : []))
+    .then(rows => {
+      rows = Array.isArray(rows) ? rows : [];
+      if (!isSum) return lbDedupePeople(rows);
+      const acc = {};
+      rows.forEach(row => {
+        const k = lbPersonKey(row);
+        if (!acc[k]) acc[k] = { name: row.name, last_initial: row.last_initial, grade: row.grade, value: 0 };
+        acc[k].value += Number(row.value) || 0;
+      });
+      const arr = Object.keys(acc).map(k => acc[k]);
+      arr.sort((a, b) => (bcfg.dir === "asc" ? a.value - b.value : b.value - a.value));
+      return arr;
+    })
     .catch(() => []);
 }
 function lbDedupePeople(rows){
   const seen = {};
   const out = [];
   rows.forEach(row => {
-    const key = (row.name || "").toLowerCase() + "|" + (row.last_initial || "").toLowerCase() + "|" + (row.grade || "");
+    const key = lbPersonKey(row);
     if (seen[key]) return;
     seen[key] = true;
     out.push(row);
@@ -266,14 +294,14 @@ function lbBoardRowsHtml(rows, bcfg, meName){
       }).join("")}
     </ol>`;
 }
-/* One board into `mountEl`. */
-function lbRenderBoard(mountEl, gameId, board, metric){
+/* One board into `mountEl`. `key` is a board's `key` field. */
+function lbRenderBoard(mountEl, gameId, board, key){
   if (!mountEl) return;
-  const bcfg = lbBoardConfig(gameId, metric);
+  const bcfg = lbBoardConfig(gameId, key);
   if (!leaderboardEnabled() || !bcfg) { mountEl.innerHTML = ""; return; }
   mountEl.innerHTML = `<p class="lb-empty">Loading…</p>`;
   const me = loadIdentity();
-  lbFetchBoard(gameId, board, bcfg.metric).then(rows => {
+  lbFetchBoard(gameId, board, bcfg.key).then(rows => {
     mountEl.innerHTML = lbBoardRowsHtml(rows, bcfg, me.name || "");
   });
 }
@@ -293,7 +321,7 @@ function lbRenderTop10Panel(mountEl, gameId){
       <a class="sidecard__link" href="stats.html">Full leaderboard &amp; all-time &rarr;</a>
     </div>`;
   g.boards.forEach((b, i) => {
-    lbRenderBoard(mountEl.querySelector(`[data-board-slot="${i}"]`), gameId, "weekly", b.metric);
+    lbRenderBoard(mountEl.querySelector(`[data-board-slot="${i}"]`), gameId, "weekly", b.key);
   });
 }
 
@@ -379,7 +407,7 @@ function lbInitStatsPage(){
 
   function fillMetrics(){
     const g = lbGameConfig(gameSel.value);
-    metricSel.innerHTML = (g ? g.boards : []).map(b => `<option value="${b.metric}">${escapeHtml(b.label)}</option>`).join("");
+    metricSel.innerHTML = (g ? g.boards : []).map(b => `<option value="${b.key}">${escapeHtml(b.label)}</option>`).join("");
   }
   function redraw(){ lbRenderBoard(boardMount, gameSel.value, whenSel.value, metricSel.value); }
 
@@ -424,6 +452,13 @@ function lbSubmitRun(gameId, result, identity){
   const id = identity || loadIdentity();
   if (!leaderboardEnabled() || !val || !id.name) return Promise.resolve(false);
   if (lbNameLooksBad(id.name, id.lastInitial)) return Promise.resolve(false);
+  // Bronco Blitz posts EVERY round — that's what feeds the "Total"
+  // board (and the High score board just takes the max anyway).
+  // Dash / Splash keep one row per week (a fastest-time board only
+  // wants your best).
+  if (gameId === "broncoBlitz") {
+    return lbInsert(lbRowsForMetric(gameId, id, val.metric, val.value));
+  }
   return lbClientMetricsThisWeek(gameId).then(have => {
     if (have[val.metric]) return true; // already posted this week from this browser
     return lbInsert(lbRowsForMetric(gameId, id, val.metric, val.value));
@@ -434,6 +469,9 @@ function lbSubmitRun(gameId, result, identity){
 function lbCurrentWinId(gameId){
   if (gameId === "weeklyCrossword" || gameId === "weeklyWordSearch") {
     return (typeof THIS_WEEK !== "undefined" && THIS_WEEK) ? THIS_WEEK.isoDate : null;
+  }
+  if (gameId === "printCrossword") {
+    return (typeof THIS_PRINT !== "undefined" && THIS_PRINT) ? THIS_PRINT.isoDate : null;
   }
   if (gameId === "specialEdition") {
     return (typeof SPECIAL_EDITION !== "undefined" && SPECIAL_EDITION) ? SPECIAL_EDITION.startIsoDate : null;

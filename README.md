@@ -12,7 +12,8 @@ Live features:
 - **Bronco Splash** — a persistent swim-a-lap game. Answer trivia to refill your air and pick up speed before it runs out
 - **Bronco Blitz** — a persistent 30-second trivia speed round. Answer A/B/C/D questions for 100 points each, times a streak multiplier that grows the longer your correct-answer streak runs, plus a speed bonus for fast answers; a wrong answer breaks the streak and locks you out for 3 seconds while the clock keeps running
 - **Archive** — every past edition, auto-populated as new puzzles go live
-- **Stats** — how many times you've won each game, tracked in your own browser
+- **Leaderboard & Stats** (`stats.html`) — your own win counts and streaks, tracked in your browser, plus a shared weekly **Leaderboard** (Supabase): high score for Bronco Blitz, fastest time for the other Bronco games, and fastest solve + longest streak for the Weekly Crossword / Word Search / Special Edition. Opt-in; keys live in `config.js` (see [Leaderboard (Supabase)](#leaderboard-supabase))
+- **Per-game cards** — under every game: a live "Your Stats" card that pops when a number goes up, and a "Share This Game" card with two links — *play the exact same set* (no score attached) and *challenge them* (with your score to beat)
 
 **Retired (v1.5):** Daily Crossword and Guess the Teacher are no longer published. Their pages, homepage cards, and nav links are gone, but every past edition stays playable at the bottom of the Archive.
 
@@ -48,14 +49,172 @@ bronco-dash.html          Bronco Dash (persistent track game)
 bronco-splash.html        Bronco Splash (persistent swimming game)
 bronco-blitz.html         Bronco Blitz (persistent trivia speed round)
 archive.html              Past editions of every game
-stats.html                Per-browser win counts for each game
+stats.html                Leaderboard & Stats — per-browser win counts/streaks + the shared weekly leaderboard
 report-bug.html           "Bug Report / Contact" — embeds the Google Form used for bug reports and for contacting the editors (BUG_REPORT_FORM_URL in config.js)
 404.html                  Shown for any URL that doesn't match a real page
-config.js                 All puzzle content + shared rendering logic
+config.js                 All puzzle content + shared rendering logic (incl. the per-game stats/share cards + puzzle solve-tracking)
+leaderboard.js            Shared weekly leaderboard client (Supabase REST). Keys live in config.js; blank them to switch it off
+blocked-words.csv/.sql    LDNOOBW profanity list (CSV import + ready-to-run INSERT) for the Supabase blocked_words table; also inlined in leaderboard.js
 embed.js                  Iframe auto-resize helper (only does anything when the site is framed)
 styles.css                Shared styling for every page
 logo.png / favicon.png / apple-touch-icon.png   Site branding
 ```
+
+### Per-game stats + challenge cards
+
+Every game page mounts two cards under the game with one call —
+`mountGamePageCards("<statGameId>")` — which expects three empty `<div>`s in the
+markup: `#challengeBannerMount` (above the game), `#gameStatsCardMount` and
+`#gameShareCardMount` (the side-by-side pair below it). Everything is driven off
+each game's `STAT_GAMES` entry, which now also carries a `blurb` and a
+`challengeMetric` (`"score"` / `"time"` / `"finish"`). The cards react to two new
+events dispatched by the win/score recorders in `config.js`:
+
+- `roundup:statschange` `{ category, changes }` — a stored number went up; the
+  "Your Stats" card re-renders and pops just the changed rows.
+- `roundup:roundcomplete` `{ category, result }` — one Bronco playthrough ended;
+  used by the incoming-challenge banner and by `leaderboard.js` to offer a submit.
+- `roundup:puzzlesolved` `{ category, winId, timeSeconds, firstTime }` — a
+  crossword / word search / Special Edition embed reported a completion. Only the
+  **first** completion per puzzle per browser is announced (`firstTime: true`) and
+  its time frozen in `localStorage` under `roundup:solved:<cat>:<winId>` — that's
+  the anti-cheese: restarting the puzzle after seeing the answers can't post a
+  faked fast time, because the frozen record is never rewritten.
+
+The "Share This Game" card has two separate links:
+
+- **Play the same set** — the identical game, *no score attached*. For the Bronco
+  games this is a seeded `?set=<seed>` link (fed into `makeSeededRandom` →
+  `createQuestionQueue`, so the friend gets the exact same questions in the exact
+  same order). For the puzzle games everyone already plays the same weekly embed,
+  so it's just the plain URL.
+- **Challenge them** — the same link plus `?ch=1&kind=<metric>&by=<name>&beat=<n>`,
+  which shows the opener a "beat this" banner.
+
+The player's name / last initial / grade lives in `localStorage` under
+`roundup:identity` — the **same** record the leaderboard sign-in uses.
+
+## Leaderboard (Supabase)
+
+`SUPABASE_URL` / `SUPABASE_ANON_KEY` at the top of `config.js` point at the
+project's REST API. The anon key is meant to ship in client code — Row Level
+Security + a name-check trigger on the `scores` table are the real guard. **Blank
+both keys and push** to switch every leaderboard feature back off instantly (it
+drops to a quiet "not set up yet" line; the stats cards and share links don't
+depend on it).
+
+### One-time table setup
+
+Run in the Supabase **SQL Editor**:
+
+```sql
+create table if not exists public.scores (
+  id           uuid primary key default gen_random_uuid(),
+  created_at   timestamptz not null default now(),
+  game_id      text not null,
+  board        text not null,                 -- 'weekly' | 'alltime'
+  week_key     text not null,                 -- ISO week e.g. '2026-W37', or 'all'
+  metric       text not null,                 -- 'score' | 'time' | 'streak'
+  value        numeric not null,
+  name         text not null,
+  last_initial text not null default '',
+  grade        text not null default '',
+  client_id    text not null default '',
+  constraint scores_game_ok   check (game_id in (
+                 'broncoBlitz','broncoDash','broncoSplash',
+                 'weeklyCrossword','weeklyWordSearch','specialEdition')),
+  constraint scores_board_ok  check (board in ('weekly','alltime')),
+  constraint scores_metric_ok check (metric in ('score','time','streak')),
+  constraint scores_value_ok  check (value >= 0 and value < 10000000),
+  constraint scores_name_len  check (char_length(name) between 1 and 20),
+  constraint scores_init_len  check (char_length(last_initial) <= 1),
+  constraint scores_grade_ok  check (grade in ('','9','10','11','12'))
+);
+create index if not exists scores_lookup
+  on public.scores (game_id, board, week_key, metric, value);
+
+alter table public.scores enable row level security;
+create policy "public read"   on public.scores for select to anon using (true);
+create policy "public insert" on public.scores for insert to anon with check (true);
+-- no update/delete policy → the anon key can't change or remove rows (you can, from the dashboard)
+```
+
+> Already ran an earlier version of this that only allowed `metric in ('score','time','finish')`?
+> Fix it with:
+> `alter table public.scores drop constraint scores_metric_ok, add constraint scores_metric_ok check (metric in ('score','time','streak'));`
+
+### Bad-name filter (the real moderation layer)
+
+Two parts: a `blocked_words` table holding the full **LDNOOBW** English list
+(~400 terms,
+[github.com/LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words)),
+and a trigger that checks each submitted name against it.
+
+**1. Create + fill the table.** Use the SQL editor — most reliable:
+
+```sql
+create table if not exists public.blocked_words (word text primary key);
+```
+
+then open **`blocked-words.sql`** from this repo, paste its contents into a new
+query, and run it (it's a single `insert … on conflict do nothing`).
+
+*(If you'd rather use Table Editor → Import CSV, `blocked-words.csv` has a `word`
+header row and one term per line. The importer will warn "Unable to auto-detect
+delimiting character; defaulted to ','" — that's harmless, there are no commas in
+the data; just proceed.)*
+
+**2. The trigger.**
+
+```sql
+create or replace function public.reject_bad_name() returns trigger as $$
+declare
+  -- de-leet, keep single spaces, letters+space only
+  norm text := trim(regexp_replace(
+    translate(lower(coalesce(new.name,'') || ' ' || coalesce(new.last_initial,'')),
+              '4@31!|05$7', 'aaeiiioost'),
+    '[^a-z]+', ' ', 'g'));
+  compact text := replace(norm, ' ', '');
+begin
+  -- slurs / hardcore: substring match (evasion-resistant, ~no name collisions)
+  if compact ~ '(nigg|fagg|kike|spic|chink|cunt|fuck|shit|retard|tranny|wetback|coon|dyke|jigab|beaner|goatse)' then
+    raise exception 'name rejected by moderation';
+  end if;
+  -- full LDNOOBW list: whole-token / whole-name only, so "Cassandra" survives "ass"
+  if exists (
+    select 1 from public.blocked_words b
+    where b.word = norm
+       or b.word = compact
+       or b.word = any(regexp_split_to_array(norm, ' '))
+  ) then
+    raise exception 'name rejected by moderation';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists scores_name_check on public.scores;
+create trigger scores_name_check before insert on public.scores
+  for each row execute function public.reject_bad_name();
+```
+
+The trigger is authoritative. `leaderboard.js` carries the same list
+(`LB_BLOCKED` + `LB_SLUR_ROOTS`) only for instant in-form feedback — if you edit
+one, edit the other (and `blocked-words.csv` / `blocked-words.sql`).
+
+Because the full list is matched as **whole words**, a real first name that only
+*contains* a listed term (Cassandra, Cassidy, Titus…) is fine; a name that **is**
+one (or a token of it) is rejected and the form says "pick another."
+
+Every row carries `name` + `grade` + `created_at` + a random per-browser
+`client_id`, and you can delete any row from the dashboard — that's the trace if
+you need one. (No IP or other network metadata is collected.)
+
+### Day to day
+
+- **Remove an entry:** Table editor → find the row(s) → delete.
+- **Wipe a game's week:** `delete from public.scores where game_id='broncoBlitz' and week_key='2026-W37';`
+- Free tier is plenty — a row is tiny.
 
 ## Editing content
 
@@ -113,6 +272,50 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 2.0 — September 2026
+
+The site goes "online": a shared weekly leaderboard, plus per-game share/challenge
+cards. Below in detail —
+
+- **Per-game cards under every game.** `mountGamePageCards("<statGameId>")` mounts
+  a live **"Your Stats"** card (each row pops via the new `roundup:statschange`
+  event when it goes up mid-visit) and a **"Share This Game"** card with two
+  clearly-separated links: *Play the same set* (identical game, no score attached
+  — a seeded `?set=` link for the Bronco games, the plain URL for the puzzles)
+  and *Challenge them* (`?ch=1&kind=…&by=…&beat=…`, which shows the opener a
+  "beat this" banner reporting the result via `roundup:roundcomplete`).
+  `STAT_GAMES` entries gained `blurb` + `challengeMetric`. New markup on all 7
+  game pages; `renderStatsPage` refactored onto a shared `statRowsFor(gameId)`.
+- **Seeded "same set" runs.** `makeSeededRandom` (mulberry32) + an optional `rng`
+  arg on `shuffleArray` / `createQuestionQueue`; the Bronco engines read `?set=`
+  and play a fixed question order for it.
+- **Nav renamed** "Stats" → "Leaderboard & Stats" on every page + the homepage
+  hub card.
+- **Player identity** stored once in `localStorage` as `roundup:identity`
+  (`{ name, lastInitial, grade }`) — shared by the links and the leaderboard.
+- **Shared weekly leaderboard (Supabase, live).** `leaderboard.js` — a
+  plain-`fetch` PostgREST client. Boards: Bronco Blitz high score; Bronco
+  Dash/Splash fastest time; Weekly Crossword / Word Search / Special Edition
+  fastest solve **and** longest streak. Each board has a weekly bucket
+  (`week_key` = ISO week) and an all-time one (`week_key = "all"`). `stats.html`
+  gained a game / board / when switcher; every game page gets a "This Week's Top
+  10" panel. Keys are in `config.js` — blank them to switch it all off.
+- **Anti-cheese for puzzle times.** `config.js`'s completion listener now times
+  solves (clock starts on the first `PUZZLE_PROGRESS`, falls back to first-message
+  time) and **freezes the first completion per puzzle per browser** in
+  `localStorage` (`roundup:solved:<cat>:<winId>`), dispatching `roundup:puzzlesolved`.
+  A restart after seeing the answers can't post a fake time — the frozen record
+  is never rewritten, only the current puzzle's `winId` is eligible, and
+  `leaderboard.js` also checks the server for an existing row from this browser
+  this week before posting.
+- **Name moderation.** The full **LDNOOBW** English list (~400 terms;
+  `blocked-words.csv` / `blocked-words.sql`) is vendored into `leaderboard.js`
+  (`LB_BLOCKED` + a small
+  `LB_SLUR_ROOTS`) for instant in-form feedback and enforced server-side by a
+  `blocked_words` table + trigger on Supabase (SQL below). Matched de-leeted;
+  slurs as substrings, the rest as whole tokens so real names that merely contain
+  a listed term (Cassandra…) aren't blocked.
 
 ### Version 1.8 — September 2026
 - Added the **Print Edition Crossword** (`print-edition.html`): the crossword from the paper's print run, put online. New list `PRINT_PUZZLES` in `config.js`, which rolls forward exactly like `WEEKLY_PUZZLES` (latest non-future `isoDate` is current, older ones move to the Archive) but on the print run's ~5x-a-year cadence. Same `crossword: { difficulty, theme, embedUrl }` sub-object shape as the Weekly crossword, so it reuses `renderCrossword` and the AmuseLabs `postMessage` win-detection plumbing unchanged. New `printCrossword` category in `STAT_GAMES` (wins only, no streak — same reasoning as Special Edition), a Stats page card, and a "Print Edition Crossword" section in the Archive (`renderPrintArchive` / `renderPrintEditionArchiveDetail`).

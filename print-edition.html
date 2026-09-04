@@ -39,7 +39,7 @@
         </div>
       </div>
       <a href="archive.html">Archive</a>
-      <a href="stats.html">Stats</a>
+      <a href="stats.html">Leaderboard &amp; Stats</a>
       <a href="about.html">About</a>
       <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Roundup Home ↗</a>
       <a href="https://www.brophyprep.org/" target="_blank" rel="noopener">Brophy Home ↗</a>
@@ -56,6 +56,8 @@
     <a class="hero__back" href="index.html">← Back to all games</a>
   </div>
 
+  <div id="challengeBannerMount"></div>
+
   <div class="panel">
     <div class="panel__head">
       <h2>Latest Print Edition Crossword</h2>
@@ -64,6 +66,11 @@
     <div class="panel__body">
       <div class="crossword-frame-wrap" id="printCrosswordFrameWrap" data-stats-category="printCrossword"></div>
     </div>
+  </div>
+
+  <div class="game-extras">
+    <div id="gameStatsCardMount"></div>
+    <div id="gameShareCardMount"></div>
   </div>
 </main>
 
@@ -80,6 +87,7 @@
 <script>
   document.getElementById("printCrosswordThemeMount").innerHTML = themeLineHtml(THIS_PRINT.crossword ? THIS_PRINT.crossword.theme : "");
   renderCrossword("printCrosswordFrameWrap", "printCrosswordDate", THIS_PRINT, withDifficulty(THIS_PRINT.date, THIS_PRINT.crossword ? THIS_PRINT.crossword.difficulty : null));
+  mountGamePageCards("printCrossword");
 </script>
 </body>
 </html>

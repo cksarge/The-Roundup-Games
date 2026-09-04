@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "1.8";
+const SITE_VERSION = "2.0";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -115,6 +115,32 @@ const BUG_REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd06QWeyW1
    embed as a fallback in case the embed itself isn't loading for
    someone. Leave it as "" to hide that fallback line entirely. */
 const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
+
+/* LEADERBOARD (Supabase) — see the "Leaderboard (Supabase)" section
+   of the README for the table/RLS/trigger SQL.
+   -----------------------------------------------------------------
+   These point at the project's REST API. The anon key is meant to
+   ship in client-side code — Row Level Security + a name-check
+   trigger on the `scores` table are what actually guard the data.
+   Blank BOTH of these to instantly switch every leaderboard feature
+   back off (it drops to a quiet "not set up yet" line; the per-game
+   stats cards and challenge/same-set links don't depend on it). */
+const SUPABASE_URL = "https://wscjrgimchvfvmzaimhd.supabase.co/";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzY2pyZ2ltY2h2ZnZtemFpbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NzEwMTYsImV4cCI6MjEwNDA0NzAxNn0.CAQyR62LxFD4vSrjGDPxkShYEEcGQM1WfVF2ZC-qFtU";
+function leaderboardEnabled(){ return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
+
+/* ISO-week bucket like "2026-W36" — what the weekly boards group on.
+   Monday-based, matches the site's "new games every school week"
+   cadence. Pass a Date (or nothing for "this week"). */
+function isoWeekKey(input){
+  const d = input ? new Date(input) : new Date();
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
 
 /* ----------------------------------------------------------------
    WEEKLY PUZZLES — Weekly Crossword + Weekly Word Search
@@ -686,10 +712,10 @@ function renderHomeCards(){
       cta: "Browse games →"
     },
     {
-      title: "Stats",
-      blurb: "How many times you've won each game, plus your current streak on the daily and weekly puzzles — tracked in your own browser.",
+      title: "Leaderboard & Stats",
+      blurb: "This week's top players on the shared leaderboard, plus your own win counts and streaks tracked in your browser.",
       href: "stats.html",
-      cta: "View your stats →"
+      cta: "Open Leaderboard & Stats →"
     },
     {
       title: "Archive",
@@ -852,6 +878,63 @@ function renderSpecialEmbed(mountId, embedUrl, titleLabel, winId){
    way. */
 const AMUSELABS_ORIGIN = "https://puzzleme.amuselabs.com";
 
+/* ---------- puzzle solve records (anti-cheese) ----------
+   A crossword / word search / spelling-bee solve should only ever
+   count ONCE per puzzle per browser — otherwise someone finishes,
+   reads the answers, restarts, blitzes through, and posts a fake
+   "fast" time. So the FIRST completion we see for a given puzzle is
+   frozen in localStorage (its time included) and never touched
+   again; later completions of the same puzzle are ignored for
+   leaderboard purposes.
+
+   Timing is measured on our side: the clock starts on the first
+   PUZZLE_PROGRESS message for that puzzle (≈ when the solver starts
+   working) and stops at completion. If a completion arrives with no
+   prior progress in this page view (a replay of an already-solved
+   puzzle), there's no fresh clock, so no time is recorded — but the
+   freeze/solve still stands. */
+const PUZZLE_SOLVE_KEY_PREFIX = "roundup:solved:";
+const puzzleClocks = {};    // "category::winId" -> { startedAt } — set on first PUZZLE_PROGRESS (preferred)
+const puzzleFirstSeen = {}; // "category::winId" -> ts of the first message of any kind — fallback start
+
+function puzzleSolveRecord(category, winId){
+  if (!category || !winId) return null;
+  return loadGameState(PUZZLE_SOLVE_KEY_PREFIX + category + ":" + winId);
+}
+/* Writes the first-completion record once. Never overwrites an
+   existing one (that's the whole anti-cheese point). Returns the
+   record that now stands. */
+function freezePuzzleSolve(category, winId, timeSeconds){
+  const key = PUZZLE_SOLVE_KEY_PREFIX + category + ":" + winId;
+  const existing = loadGameState(key);
+  if (existing) return existing;
+  const t = (typeof timeSeconds === "number" && isFinite(timeSeconds) && timeSeconds > 0)
+    ? Math.round(timeSeconds * 100) / 100
+    : null;
+  const rec = { at: Date.now(), t: t };
+  saveGameState(key, rec);
+  return rec;
+}
+/* Best-effort: some AmuseLabs payloads carry an elapsed time. Prefer
+   that over our own wall-clock when it's present and sane. */
+function amuselabsPayloadSeconds(data){
+  const candidates = [data.elapsedTime, data.secondsElapsed, data.solveTime, data.timeElapsed, data.time, data.timer];
+  for (let i = 0; i < candidates.length; i++) {
+    let v = candidates[i];
+    if (typeof v !== "number" || !isFinite(v) || v <= 0) continue;
+    if (v > 36000) v = v / 1000;          // looks like milliseconds
+    if (v >= 1 && v <= 36000) return Math.round(v * 100) / 100;
+  }
+  return null;
+}
+function emitPuzzleSolved(category, winId, timeSeconds, streakEligible, firstTime){
+  try {
+    document.dispatchEvent(new CustomEvent("roundup:puzzlesolved", {
+      detail: { category: category, winId: winId, timeSeconds: timeSeconds, streakEligible: streakEligible, firstTime: firstTime }
+    }));
+  } catch (e) { /* no-op */ }
+}
+
 function initPuzzleCompletionListener(){
   // Registers window.addEventListener immediately when this runs
   // (see the call site below, right after this function's own
@@ -880,21 +963,50 @@ function initPuzzleCompletionListener(){
     }
     if (!data || !data.id) return;
 
+    // which puzzle on this page sent it (matches the AmuseLabs id
+    // against each embed's iframe src, same as before)
+    let category = null, winId = null, streakEligible = false, matched = false;
+    document.querySelectorAll(".crossword-frame-wrap iframe").forEach(iframe => {
+      if (iframe.src.indexOf(data.id) === -1) return;
+      const wrap = iframe.closest(".crossword-frame-wrap");
+      category = wrap && wrap.dataset.statsCategory;
+      winId = wrap && wrap.dataset.statsWinId;
+      streakEligible = !!(wrap && wrap.dataset.statsStreakEligible === "true");
+      matched = true;
+    });
+    if (!matched || !category || !winId) return;
+
+    const clockKey = category + "::" + winId;
+    const alreadySolved = !!puzzleSolveRecord(category, winId);
+
+    // remember the first time we hear ANYTHING about this puzzle in
+    // this page view — the fallback solve-clock start if no
+    // PUZZLE_PROGRESS ever arrives (some embed types are quiet until
+    // completion)
+    if (!alreadySolved && !puzzleFirstSeen[clockKey]) puzzleFirstSeen[clockKey] = Date.now();
+
+    // the good clock: starts on the first sign of actual solving
+    if (data.type === "PUZZLE_PROGRESS" && !alreadySolved && !puzzleClocks[clockKey]) {
+      puzzleClocks[clockKey] = { startedAt: Date.now() };
+    }
+
     const isCrosswordStyleComplete = data.type === "PUZZLE_COMPLETE" && data.completedCorrectly;
     const isWordFlowerComplete = data.type === "PUZZLE_PROGRESS"
       && typeof data.wordsFound === "number" && typeof data.totalWords === "number"
       && data.totalWords > 0 && data.wordsFound >= data.totalWords;
     if (!isCrosswordStyleComplete && !isWordFlowerComplete) return;
 
-    document.querySelectorAll(".crossword-frame-wrap iframe").forEach(iframe => {
-      if (iframe.src.indexOf(data.id) !== -1) {
-        const wrap = iframe.closest(".crossword-frame-wrap");
-        const category = wrap && wrap.dataset.statsCategory;
-        const winId = wrap && wrap.dataset.statsWinId;
-        const streakEligible = !!(wrap && wrap.dataset.statsStreakEligible === "true");
-        if (category && winId) recordWin(category, winId, streakEligible);
-      }
-    });
+    recordWin(category, winId, streakEligible);
+
+    // anti-cheese: only the FIRST completion is recorded/announced
+    if (alreadySolved) return;
+    const clk = puzzleClocks[clockKey];
+    const payloadT = amuselabsPayloadSeconds(data);
+    let wallT = null;
+    if (clk) wallT = (Date.now() - clk.startedAt) / 1000;
+    else if (puzzleFirstSeen[clockKey]) wallT = (Date.now() - puzzleFirstSeen[clockKey]) / 1000;
+    const rec = freezePuzzleSolve(category, winId, payloadT != null ? payloadT : wallT);
+    emitPuzzleSolved(category, winId, rec.t, streakEligible, true);
   });
 }
 initPuzzleCompletionListener();
@@ -985,6 +1097,7 @@ function renderSpecialEditionPage(){
     if (dateEl) dateEl.textContent = "";
     const wrap = document.getElementById("specialFrameWrap");
     if (wrap) wrap.innerHTML = `<div class="crossword-fallback">Sorry, but there is no special edition game today. Check back during school breaks and special occasions.</div>`;
+    clearGamePageCards();
     return;
   }
 
@@ -993,6 +1106,8 @@ function renderSpecialEditionPage(){
   if (headingEl) headingEl.textContent = "Play";
   if (dateEl) dateEl.textContent = withDifficulty(SPECIAL_EDITION.date, SPECIAL_EDITION.difficulty);
   renderSpecialEmbed("specialFrameWrap", SPECIAL_EDITION.embedUrl, `Special Edition — ${SPECIAL_EDITION.theme}`, SPECIAL_EDITION.startIsoDate);
+  mountGamePageCards("specialEdition");
+  if (typeof lbAttachPuzzlePage === "function") lbAttachPuzzlePage("specialEdition");
 }
 
 /* ---------- tiny localStorage helpers (used to remember guesses) ---------- */
@@ -1053,16 +1168,22 @@ function escapeHtml(str){
    their wins / streaks through the same plumbing, but renderStatsPage
    filters them out so they no longer get a card on the Stats page. */
 const STATS_STORAGE_KEY = "roundup:stats";
+/* `blurb` / `challengeMetric` (live games only) feed the two cards
+   that now sit under each game — see "PER-GAME SIDE CARDS" below.
+   challengeMetric decides what a challenge link dares a friend to do:
+     "score"  — beat a high score   (higher is better)  — Bronco Blitz
+     "time"   — beat a fastest time  (lower is better)   — Dash / Splash
+     "finish" — just "I solved it, your turn"            — the crosswords */
 const STAT_GAMES = [
   { id: "miniCrossword", label: "Daily Crossword", retired: true, streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
-  { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
-  { id: "weeklyWordSearch", label: "Weekly Word Search", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
-  { id: "printCrossword", label: "Print Edition Crossword", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
+  { id: "weeklyCrossword", label: "Weekly Crossword", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false, blurb: "A bigger, themed crossword posted every school Monday.", challengeMetric: "finish" },
+  { id: "weeklyWordSearch", label: "Weekly Word Search", streak: true, streakUnit: "week", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false, blurb: "A themed word search posted every school Monday.", challengeMetric: "finish" },
+  { id: "printCrossword", label: "Print Edition Crossword", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false, blurb: "The crossword from The Roundup's latest print issue.", challengeMetric: "finish" },
   { id: "guessTheTeacher", label: "Guess the Teacher", retired: true, streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
-  { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
-  { id: "broncoDash", label: "Bronco Dash", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false },
-  { id: "broncoSplash", label: "Bronco Splash", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false },
-  { id: "broncoBlitz", label: "Bronco Blitz", streak: false, streakUnit: null, trackWins: false, trackBestTime: false, trackPoints: true, trackBestScore: true }
+  { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false, blurb: "A one-off puzzle for school breaks and special occasions.", challengeMetric: "finish" },
+  { id: "broncoDash", label: "Bronco Dash", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false, blurb: "Answer trivia to sprint down the track before the pace line catches you.", challengeMetric: "time" },
+  { id: "broncoSplash", label: "Bronco Splash", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false, blurb: "Answer trivia to catch your breath and swim a full lap.", challengeMetric: "time" },
+  { id: "broncoBlitz", label: "Bronco Blitz", streak: false, streakUnit: null, trackWins: false, trackBestTime: false, trackPoints: true, trackBestScore: true, blurb: "Thirty seconds of A/B/C/D trivia — chain answers for a bigger multiplier.", challengeMetric: "score" }
 ];
 
 function loadStats(){
@@ -1086,6 +1207,29 @@ function loadStats(){
   return stats;
 }
 
+/* ---------- stat-change / round-complete events ----------
+   The per-game stats card and the incoming-challenge banner (see
+   "PER-GAME SIDE CARDS" below) react to these instead of polling.
+     roundup:statschange  { category, changes: ["wins","streak",...] }
+       — a stored number for `category` just went up; `changes` lists
+         which stat keys (matches statRowsFor's keys) so the card can
+         pop just those rows.
+     roundup:roundcomplete { category, result: { won, score, timeSeconds } }
+       — a single playthrough just ended. Fired by the Bronco engines
+         and by recordWin (first win only). This is also the seam the
+         leaderboard hooks onto to offer "submit this run." */
+function emitStatsChange(category, changes){
+  if (!changes || !changes.length) return;
+  try {
+    document.dispatchEvent(new CustomEvent("roundup:statschange", { detail: { category, changes } }));
+  } catch (e) { /* CustomEvent unsupported — cards just won't animate */ }
+}
+function emitRoundComplete(category, result){
+  try {
+    document.dispatchEvent(new CustomEvent("roundup:roundcomplete", { detail: { category, result: result || {} } }));
+  } catch (e) { /* no-op */ }
+}
+
 /* Records a new time (in seconds) for a persistent game, keeping
    only the fastest one ever seen. Returns true if this was a new
    best (so the finish screen can say so), false otherwise. */
@@ -1099,6 +1243,7 @@ function recordBestTime(category, seconds){
   if (isNewBest) {
     stats.bestTimes[category] = seconds;
     saveGameState(STATS_STORAGE_KEY, stats);
+    emitStatsChange(category, ["bestTime"]);
   }
   return isNewBest;
 }
@@ -1116,8 +1261,10 @@ function addPoints(category, amount){
   if (!game || !game.trackPoints || typeof amount !== "number" || !isFinite(amount)) return null;
 
   const stats = loadStats();
-  stats.points[category] = (stats.points[category] || 0) + Math.max(0, Math.round(amount));
+  const added = Math.max(0, Math.round(amount));
+  stats.points[category] = (stats.points[category] || 0) + added;
   saveGameState(STATS_STORAGE_KEY, stats);
+  if (added > 0) emitStatsChange(category, ["points"]);
   return stats.points[category];
 }
 
@@ -1139,6 +1286,7 @@ function recordBestScore(category, score){
   if (isNewBest) {
     stats.bestScores[category] = score;
     saveGameState(STATS_STORAGE_KEY, stats);
+    emitStatsChange(category, ["bestScore"]);
   }
   return isNewBest;
 }
@@ -1159,17 +1307,24 @@ function recordWin(category, winId, streakEligible){
   if (!winId || !STAT_GAMES.some(game => game.id === category)) return;
   const stats = loadStats();
   let changed = false;
+  const changes = [];
 
   if (!stats[category].includes(winId)) {
     stats[category].push(winId);
     changed = true;
+    changes.push("wins");
   }
   if (streakEligible && stats.streakWins[category] && !stats.streakWins[category].includes(winId)) {
     stats.streakWins[category].push(winId);
     changed = true;
+    changes.push("streak");
   }
 
-  if (changed) saveGameState(STATS_STORAGE_KEY, stats);
+  if (changed) {
+    saveGameState(STATS_STORAGE_KEY, stats);
+    emitStatsChange(category, changes);
+    emitRoundComplete(category, { won: true });
+  }
 }
 
 function getWinCount(category){
@@ -1647,49 +1802,59 @@ function renderSpecialArchive(){
   );
 }
 
+/* The stat rows that apply to one game, in display order, as
+   { key, label, value }. `key` matches the strings emitStatsChange
+   uses ("wins" / "streak" / "bestTime" / "bestScore" / "points") so
+   a card can pop just the row that changed. Shared by the Stats page
+   and by the per-game "Your Stats" card under each game. */
+function statRowsFor(gameId){
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  if (!game) return [];
+  const rows = [];
+
+  if (game.trackWins) {
+    rows.push({ key: "wins", label: "Wins", value: `${getWinCount(game.id)}` });
+  }
+
+  const streak = computeStreak(game.id);
+  if (streak !== null) {
+    rows.push({ key: "streak", label: "Streak", value: `${streak} ${game.streakUnit}${streak === 1 ? "" : "s"}` });
+  }
+
+  if (game.trackBestTime) {
+    const best = getBestTime(game.id);
+    rows.push({ key: "bestTime", label: "Fastest", value: best === null ? "—" : formatTime(best) });
+  }
+
+  if (game.trackBestScore) {
+    const best = getBestScore(game.id);
+    rows.push({ key: "bestScore", label: "High Score", value: best === null ? "—" : best.toLocaleString() });
+  }
+
+  if (game.trackPoints) {
+    rows.push({ key: "points", label: "Lifetime Total", value: `${getPoints(game.id).toLocaleString()} pts` });
+  }
+
+  return rows;
+}
+
 /* ---------- stats page (stats.html only) ----------
    One card per non-retired game (STAT_GAMES entry without `retired`),
-   each listing only the stats
-   that apply to it — a crossword-type game shows Wins/Streak, a
-   persistent race/swim game shows Wins (if tracked) and Fastest
-   time, and Bronco Blitz shows High Score and Lifetime Total as two
-   separate lines rather than mashed into one combined string. */
+   each listing only the stats that apply to it (see statRowsFor) —
+   a crossword-type game shows Wins/Streak, a persistent race/swim
+   game shows Wins (if tracked) and Fastest time, and Bronco Blitz
+   shows High Score and Lifetime Total as two separate lines. */
 function renderStatsPage(){
   const mount = document.getElementById("statsList");
   if (!mount) return;
 
   mount.innerHTML = STAT_GAMES.filter(game => !game.retired).map(game => {
-    const stats = [];
-
-    if (game.trackWins) {
-      const count = getWinCount(game.id);
-      stats.push({ label: "Wins", value: `${count}` });
-    }
-
-    const streak = computeStreak(game.id);
-    if (streak !== null) {
-      stats.push({ label: "Streak", value: `${streak} ${game.streakUnit}${streak === 1 ? "" : "s"}` });
-    }
-
-    if (game.trackBestTime) {
-      const best = getBestTime(game.id);
-      stats.push({ label: "Fastest", value: best === null ? "—" : formatTime(best) });
-    }
-
-    if (game.trackBestScore) {
-      const best = getBestScore(game.id);
-      stats.push({ label: "High Score", value: best === null ? "—" : best.toLocaleString() });
-    }
-
-    if (game.trackPoints) {
-      stats.push({ label: "Lifetime Total", value: `${getPoints(game.id).toLocaleString()} pts` });
-    }
-
+    const rows = statRowsFor(game.id);
     return `
       <article class="stat-card">
         <h2>${game.label}</h2>
         <ul class="stat-card__list">
-          ${stats.map(s => `
+          ${rows.map(s => `
             <li>
               <span class="stat-card__label">${s.label}</span>
               <span class="stat-card__value">${s.value}</span>
@@ -1702,6 +1867,408 @@ function renderStatsPage(){
 }
 
 /* ================================================================
+   PER-GAME SIDE CARDS + CHALLENGE LINKS
+   ----------------------------------------------------------------
+   Every game page (weekly-crossword / weekly-word-search /
+   print-edition / special-edition / bronco-dash / bronco-splash /
+   bronco-blitz) drops two cards in under the game, side by side:
+
+     • "Your Stats"        — the same numbers as that game's card on
+                             stats.html, but right here, and each row
+                             pops when it goes up mid-visit (fed by
+                             the roundup:statschange event).
+     • "Challenge a Friend" — a ready-to-paste blurb + a link that
+                             drops a friend straight into this game
+                             with your score to beat (?ch=1&…).
+
+   A page opts in with one call: mountGamePageCards("broncoBlitz").
+   It expects three mount points in the markup:
+     #challengeBannerMount  (above the game — shows an INCOMING
+                             challenge when the page is opened via a
+                             ?ch=1 link)
+     #gameStatsCardMount / #gameShareCardMount  (the two cards)
+
+   The player's name for the links is stored once in localStorage
+   under roundup:identity — the SAME record the leaderboard sign-in
+   on stats.html uses, so setting it in either place covers both.
+   ================================================================ */
+
+const IDENTITY_STORAGE_KEY = "roundup:identity";
+
+/* { name, lastInitial, grade } — any field may be "". */
+function loadIdentity(){
+  const raw = loadGameState(IDENTITY_STORAGE_KEY);
+  if (!raw || typeof raw !== "object") return { name: "", lastInitial: "", grade: "" };
+  return {
+    name: typeof raw.name === "string" ? raw.name : "",
+    lastInitial: typeof raw.lastInitial === "string" ? raw.lastInitial : "",
+    grade: typeof raw.grade === "string" ? raw.grade : ""
+  };
+}
+function saveIdentity(identity){
+  saveGameState(IDENTITY_STORAGE_KEY, {
+    name: (identity.name || "").trim().slice(0, 20),
+    lastInitial: (identity.lastInitial || "").trim().slice(0, 1).toUpperCase(),
+    grade: (identity.grade || "").trim().replace(/[^0-9]/g, "").slice(0, 2)
+  });
+}
+/* "Carter K." / "Carter" / "" — name + last initial, no grade
+   (kept short since it also goes in the challenge URL's ?by=). */
+function formatIdentity(id){
+  id = id || loadIdentity();
+  if (!id.name) return "";
+  return id.lastInitial ? `${id.name} ${id.lastInitial}.` : id.name;
+}
+/* Three quick prompts. The leaderboard page gets a real form later;
+   this is just enough to personalize a challenge link. */
+function openIdentityPrompt(onDone){
+  const cur = loadIdentity();
+  const name = window.prompt("First name — shown on your challenge links (and, later, the leaderboard):", cur.name || "");
+  if (name === null) return;
+  const lastInitial = window.prompt("Last initial (one letter):", cur.lastInitial || "");
+  if (lastInitial === null) return;
+  const grade = window.prompt("Grade number, 9–12 (optional — leave blank to skip):", cur.grade || "");
+  if (grade === null) return;
+  saveIdentity({ name: name, lastInitial: lastInitial, grade: grade });
+  if (typeof onDone === "function") onDone();
+}
+
+function copyText(text){
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return Promise.resolve(ok);
+  } catch (e) {
+    return Promise.resolve(false);
+  }
+}
+
+/* This page's own URL with any existing query/hash stripped — the
+   base a challenge link is built on, so links keep working wherever
+   the site is hosted (github.io directly, or framed on the SNO site). */
+function gameBaseUrl(){
+  return location.origin + location.pathname;
+}
+/* Tiny "?a=1&b=2" reader — avoids depending on URLSearchParams,
+   keeping to the same very-plain JS as the rest of the file. */
+function readQueryParam(name){
+  const q = (location.search || "").replace(/^\?/, "");
+  if (!q) return null;
+  const parts = q.split("&");
+  for (let i = 0; i < parts.length; i++) {
+    const eq = parts[i].indexOf("=");
+    const key = eq === -1 ? parts[i] : parts[i].slice(0, eq);
+    if (decodeURIComponent(key) !== name) continue;
+    const val = eq === -1 ? "" : parts[i].slice(eq + 1);
+    try { return decodeURIComponent(val.replace(/\+/g, " ")); }
+    catch (e) { return val; }
+  }
+  return null;
+}
+/* The number a challenge dares a friend to beat: the player's own
+   best. null for "finish" games (nothing numeric to beat). */
+function currentChallengeBeat(gameId){
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  if (!game) return null;
+  if (game.challengeMetric === "score") return getBestScore(gameId);
+  if (game.challengeMetric === "time") return getBestTime(gameId);
+  return null;
+}
+function buildChallengeUrl(gameId){
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  const metric = game ? (game.challengeMetric || "finish") : "finish";
+  const pairs = [["ch", "1"], ["kind", metric]];
+  const by = formatIdentity();
+  if (by) pairs.push(["by", by]);
+  const beat = currentChallengeBeat(gameId);
+  if (typeof beat === "number" && isFinite(beat)) {
+    pairs.push(["beat", metric === "time" ? beat.toFixed(2) : String(Math.round(beat))]);
+  }
+  const query = pairs.map(p => `${encodeURIComponent(p[0])}=${encodeURIComponent(p[1])}`).join("&");
+  return `${gameBaseUrl()}?${query}`;
+}
+
+/* ---------- "play the exact same set" links ----------
+   Separate from the challenge link above: this one carries NO score,
+   NO taunt — it just drops a friend into the identical game so you
+   two can compare fairly.
+
+   For the Bronco games (a random draw from the shared question
+   pool), "same set" means the same questions in the same order, so
+   the link carries a seed (?set=SEED) that the game feeds into its
+   seeded RNG. For the crossword / word search / Special Edition
+   games everyone already plays the exact same puzzle that week, so
+   the link is just the plain game URL. */
+function gameUsesSeededSet(gameId){
+  return gameId === "broncoDash" || gameId === "broncoSplash" || gameId === "broncoBlitz";
+}
+/* `seedOverride` keeps the seed stable across re-renders of the
+   share card (otherwise a fresh one would be minted every redraw and
+   a link someone already copied would go stale). */
+function buildSameSetUrl(gameId, seedOverride){
+  if (!gameUsesSeededSet(gameId)) return gameBaseUrl();
+  // pass along the seed we're currently playing, if any, so a shared
+  // set can be handed onward unchanged; otherwise use the override /
+  // mint a fresh one
+  const seed = readQueryParam("set") || seedOverride || randomSetSeed();
+  return `${gameBaseUrl()}?set=${encodeURIComponent(seed)}`;
+}
+function sameSetBlurbFor(gameId, seedOverride){
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  if (!game) return "";
+  const who = formatIdentity();
+  const what = gameUsesSeededSet(gameId) ? "the exact same set of questions" : "the exact same puzzle";
+  const lead = who ? `${who} wants you to play ${game.label} — ${what}, no score attached:` : `Play ${game.label} — ${what}, no score attached:`;
+  return `${lead}\n${buildSameSetUrl(gameId, seedOverride)}`;
+}
+
+/* The paste-anywhere blurb shown in the Challenge card. Plain text
+   on purpose — reads fine in a group chat, no emoji to clash with
+   the paper's look. */
+function shareBlurbFor(gameId){
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  if (!game) return "";
+  const who = formatIdentity();
+  const numbers = statRowsFor(gameId).map(r => `${r.label} ${r.value}`).join(" · ");
+  const beat = currentChallengeBeat(gameId);
+  const lead = who ? `${who} — ${game.label}, The Roundup Games` : `${game.label} — The Roundup Games`;
+
+  let taunt;
+  if (game.challengeMetric === "score") {
+    taunt = (typeof beat === "number") ? `Beat my high score of ${beat.toLocaleString()}:` : "Think you can out-score me?";
+  } else if (game.challengeMetric === "time") {
+    taunt = (typeof beat === "number") ? `Beat my time of ${formatTime(beat)}:` : "Think you're faster?";
+  } else {
+    taunt = "I finished this one — your turn:";
+  }
+
+  return `${lead}\n${numbers}\n${taunt}\n${buildChallengeUrl(gameId)}`;
+}
+
+/* "Your Stats" card. Re-renders and pops the changed row(s) whenever
+   roundup:statschange fires for this game. */
+function renderGameStatsCard(mountId, gameId){
+  const mount = document.getElementById(mountId);
+  if (!mount) return;
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  if (!game) { mount.innerHTML = ""; return; }
+
+  function draw(bumpKeys){
+    const rows = statRowsFor(gameId);
+    mount.innerHTML = `
+      <article class="sidecard sidecard--stats">
+        <div class="sidecard__eyebrow">Your Stats</div>
+        <h2 class="sidecard__title">${escapeHtml(game.label)}</h2>
+        <ul class="stat-card__list">
+          ${rows.map(s => `
+            <li data-stat-key="${s.key}">
+              <span class="stat-card__label">${s.label}</span>
+              <span class="stat-card__value">${s.value}</span>
+            </li>
+          `).join("")}
+        </ul>
+        <a class="sidecard__link" href="stats.html">All your stats &rarr;</a>
+      </article>
+    `;
+
+    if (bumpKeys && bumpKeys.length) {
+      const card = mount.querySelector(".sidecard--stats");
+      if (card) {
+        card.classList.remove("is-celebrating");
+        void card.offsetWidth;             // restart the animation
+        card.classList.add("is-celebrating");
+        card.addEventListener("animationend", () => card.classList.remove("is-celebrating"), { once: true });
+      }
+      bumpKeys.forEach(key => {
+        const li = mount.querySelector(`[data-stat-key="${key}"]`);
+        if (!li) return;
+        void li.offsetWidth;
+        li.classList.add("is-bumped");
+        li.addEventListener("animationend", () => li.classList.remove("is-bumped"), { once: true });
+      });
+    }
+  }
+
+  draw(null);
+  document.addEventListener("roundup:statschange", (e) => {
+    if (!e.detail || e.detail.category !== gameId) return;
+    draw(e.detail.changes || []);
+  });
+}
+
+/* "Share This Game" card — two clearly separated options:
+     1. Play the same set  — identical game, NOTHING about your score
+        goes with it. (For Bronco games this is a seeded ?set= link;
+        for the puzzles it's just the puzzle link.)
+     2. Challenge          — the same link plus your score to beat. */
+function renderGameShareCard(mountId, gameId){
+  const mount = document.getElementById(mountId);
+  if (!mount) return;
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  if (!game) { mount.innerHTML = ""; return; }
+
+  const seeded = gameUsesSeededSet(gameId);
+  const sameSetWhat = seeded ? "same questions, same order" : "the same puzzle";
+  // one stable seed for the life of this card
+  const cardSeed = seeded ? (readQueryParam("set") || randomSetSeed()) : null;
+
+  function draw(){
+    const id = loadIdentity();
+    const who = formatIdentity(id);
+    const sameSetText = sameSetBlurbFor(gameId, cardSeed);
+    const challengeText = shareBlurbFor(gameId);
+    const challengeUrl = buildChallengeUrl(gameId);
+
+    mount.innerHTML = `
+      <article class="sidecard sidecard--share">
+        <div class="sidecard__eyebrow">Share This Game</div>
+        <h2 class="sidecard__title">${escapeHtml(game.label)}</h2>
+        <p class="sidecard__blurb">${escapeHtml(game.blurb || "")}</p>
+        <p class="sidecard__who">
+          ${
+            who
+              ? `Playing as <strong>${escapeHtml(who)}</strong>${id.grade ? ` &middot; Gr.&nbsp;${escapeHtml(id.grade)}` : ""}`
+              : `<em>No name set &mdash; your links will just say &ldquo;a friend.&rdquo;</em>`
+          }
+          <button type="button" class="sidecard__editname" data-act="edit">${who ? "Edit" : "Set a name"}</button>
+        </p>
+
+        <div class="sharegroup">
+          <div class="sharegroup__label">Play the same set</div>
+          <p class="sharegroup__note">Sends a friend into ${escapeHtml(seeded ? "this exact game" : "this exact puzzle")} — <strong>${escapeHtml(sameSetWhat)}</strong>, with <strong>nothing about your score attached</strong>. Just so you can compare fairly.</p>
+          <textarea id="${mountId}SameSet" class="sidecard__text" rows="3" readonly>${escapeHtml(sameSetText)}</textarea>
+          <div class="sidecard__actions">
+            <button type="button" class="btn" data-act="copy-sameset">Copy same-set link</button>
+            <button type="button" class="btn btn--ghost" data-act="share-sameset"${navigator.share ? "" : " hidden"}>Share&hellip;</button>
+          </div>
+        </div>
+
+        <div class="sharegroup">
+          <div class="sharegroup__label">Challenge them</div>
+          <p class="sharegroup__note">${escapeHtml(
+            game.challengeMetric === "score" ? "Same link, plus your high score to beat."
+            : game.challengeMetric === "time" ? "Same link, plus your best time to beat."
+            : "Same link, plus a note that you already finished it."
+          )}</p>
+          <textarea id="${mountId}Challenge" class="sidecard__text" rows="4" readonly>${escapeHtml(challengeText)}</textarea>
+          <div class="sidecard__actions">
+            <button type="button" class="btn" data-act="copy-challenge">Copy challenge</button>
+            <button type="button" class="btn btn--ghost" data-act="share-challenge"${navigator.share ? "" : " hidden"}>Share&hellip;</button>
+          </div>
+        </div>
+
+        <p class="sidecard__hint" data-role="hint" hidden></p>
+      </article>
+    `;
+
+    const hintEl = mount.querySelector('[data-role="hint"]');
+    function hint(msg){ if (hintEl) { hintEl.textContent = msg; hintEl.hidden = false; } }
+
+    mount.querySelectorAll("[data-act]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const act = btn.dataset.act;
+        if (act === "copy-sameset") {
+          copyText(sameSetText).then(ok => hint(ok ? "Same-set link copied — no score goes with it." : "Couldn’t copy automatically — select the text and copy it."));
+        } else if (act === "copy-challenge") {
+          copyText(challengeText).then(ok => hint(ok ? "Challenge copied — paste it anywhere." : "Couldn’t copy automatically — select the text and copy it."));
+        } else if (act === "share-sameset" && navigator.share) {
+          navigator.share({ text: sameSetText, url: buildSameSetUrl(gameId, cardSeed) }).catch(() => {});
+        } else if (act === "share-challenge" && navigator.share) {
+          navigator.share({ text: challengeText, url: challengeUrl }).catch(() => {});
+        } else if (act === "edit") {
+          openIdentityPrompt(() => draw());
+        }
+      });
+    });
+  }
+
+  draw();
+  // a new best changes the "score to beat" baked into the challenge blurb/link
+  document.addEventListener("roundup:statschange", (e) => {
+    if (!e.detail || e.detail.category !== gameId) return;
+    draw();
+  });
+}
+
+/* Incoming-challenge banner. Only shows when the page was opened via
+   a ?ch=1 link; then watches roundup:roundcomplete to tell the
+   player whether they answered it. */
+function renderChallengeBanner(gameId){
+  const mount = document.getElementById("challengeBannerMount");
+  if (!mount) return;
+  if (readQueryParam("ch") !== "1") { mount.innerHTML = ""; return; }
+  const game = STAT_GAMES.find(g => g.id === gameId);
+  if (!game) { mount.innerHTML = ""; return; }
+
+  const by = (readQueryParam("by") || "A friend").slice(0, 40);
+  const kind = readQueryParam("kind") || game.challengeMetric || "finish";
+  const beatRaw = readQueryParam("beat");
+  const beat = beatRaw !== null ? parseFloat(beatRaw) : null;
+  const haveBeat = beat !== null && isFinite(beat);
+
+  let target;
+  if (kind === "score" && haveBeat) target = `Beat their high score: <strong>${Math.round(beat).toLocaleString()}</strong>.`;
+  else if (kind === "time" && haveBeat) target = `Beat their time: <strong>${formatTime(beat)}</strong>.`;
+  else target = "Finish it to answer the challenge.";
+
+  mount.innerHTML = `
+    <div class="challenge-banner" role="status">
+      <div class="challenge-banner__body">
+        <span class="challenge-banner__tag">Challenge</span>
+        <p><strong>${escapeHtml(by)}</strong> challenged you on ${escapeHtml(game.label)}. ${target}</p>
+        <p class="challenge-banner__result" data-role="result" hidden></p>
+      </div>
+      <button type="button" class="challenge-banner__dismiss" aria-label="Dismiss">&times;</button>
+    </div>
+  `;
+  mount.querySelector(".challenge-banner__dismiss").addEventListener("click", () => { mount.innerHTML = ""; });
+
+  const resultEl = mount.querySelector('[data-role="result"]');
+  document.addEventListener("roundup:roundcomplete", (e) => {
+    if (!e.detail || e.detail.category !== gameId || !resultEl) return;
+    const r = e.detail.result || {};
+    let msg = null;
+    if (kind === "score" && haveBeat && typeof r.score === "number") {
+      msg = r.score >= beat
+        ? `You scored ${r.score.toLocaleString()} — challenge beaten. Fire one back below.`
+        : `You scored ${r.score.toLocaleString()} — ${(Math.round(beat) - r.score).toLocaleString()} short. Run it again?`;
+    } else if (kind === "time" && haveBeat && typeof r.timeSeconds === "number") {
+      msg = r.timeSeconds <= beat
+        ? `You finished in ${formatTime(r.timeSeconds)} — challenge beaten. Fire one back below.`
+        : `You finished in ${formatTime(r.timeSeconds)} — their ${formatTime(beat)} still stands. Run it again?`;
+    } else if (kind === "finish" && r.won) {
+      msg = "You finished it — challenge answered. Fire one back below.";
+    }
+    if (msg) { resultEl.textContent = msg; resultEl.hidden = false; }
+  });
+}
+
+/* One call per game page — see the block comment above for the
+   markup it expects. */
+function mountGamePageCards(gameId){
+  renderChallengeBanner(gameId);
+  renderGameStatsCard("gameStatsCardMount", gameId);
+  renderGameShareCard("gameShareCardMount", gameId);
+}
+/* special-edition.html calls this in both states so the cards don't
+   linger when nothing's live. */
+function clearGamePageCards(){
+  ["challengeBannerMount", "gameStatsCardMount", "gameShareCardMount", "weeklyTop10Mount", "leaderboardSubmitMount"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
+}
+
+/* ================================================================
    PERSISTENT GAME ENGINE (Bronco Dash / Bronco Splash / Bronco Blitz)
    ----------------------------------------------------------------
    Shared helpers used by the games below — createQuestionQueue and
@@ -1710,10 +2277,35 @@ function renderStatsPage(){
    Blitz has no stage of its own, just a running score and a clock.
    ================================================================ */
 
-function shuffleArray(arr){
+/* A seeded pseudo-random function (0..1), same shape as Math.random.
+   Same seed string → same stream forever. Used so a "play the same
+   set" challenge link (?set=…) hands a friend the EXACT question
+   order the sender got. Plain mulberry32 over a cheap string hash —
+   not cryptographic, just needs to be stable and well-spread. */
+function makeSeededRandom(seedStr){
+  let h = 1779033703 ^ String(seedStr).length;
+  for (let i = 0; i < String(seedStr).length; i++) {
+    h = Math.imul(h ^ String(seedStr).charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  let a = h >>> 0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/* A short random seed for a fresh "same set" link. */
+function randomSetSeed(){
+  return Math.random().toString(36).slice(2, 8);
+}
+
+function shuffleArray(arr, rng){
+  const rand = typeof rng === "function" ? rng : Math.random;
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -1738,17 +2330,28 @@ function shuffleQuestionChoices(question){
 
 /* Draws questions from `pool` in a random order with no immediate
    repeats; reshuffles and keeps going once it runs out, so a run
-   can never actually exhaust the pool. */
-function createQuestionQueue(pool){
-  let queue = shuffleArray(pool);
+   can never actually exhaust the pool. Pass `rng` (from
+   makeSeededRandom) to get a fixed, reproducible order for a "same
+   set" challenge link; omit it for a normal random run. */
+function createQuestionQueue(pool, rng){
+  const rand = typeof rng === "function" ? rng : Math.random;
+  let queue = shuffleArray(pool, rand);
   let index = 0;
   return function next(){
     if (index >= queue.length) {
-      queue = shuffleArray(pool);
+      queue = shuffleArray(pool, rand);
       index = 0;
     }
     return queue[index++];
   };
+}
+
+/* If this page was opened from a "play the same set" link
+   (?set=SEED), a seeded RNG for that seed; otherwise null (→ normal
+   random run). The Bronco engines pass this into createQuestionQueue. */
+function sameSetRng(){
+  const seed = readQueryParam("set");
+  return seed ? makeSeededRandom(seed) : null;
 }
 
 /* Renders one question into `${prefix}QuestionText` / `${prefix}Choices`
@@ -1907,7 +2510,7 @@ function initBroncoDash(){
   const BOOST_MIN = 3, BOOST_MAX = 5, WRONG_WAIT_MS = 3000;
   const SCROLL_BASE_SPEED = 100;
 
-  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS);
+  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS, sameSetRng());
 
   let tick = START;
   let pace = START - PACE_START_GAP;
@@ -1982,6 +2585,7 @@ function initBroncoDash(){
     const elapsed = (Date.now() - startTime) / 1000;
     recordWin("broncoDash", `${Date.now()}-${Math.random()}`);
     const isNewBest = recordBestTime("broncoDash", elapsed);
+    emitRoundComplete("broncoDash", { won: true, timeSeconds: elapsed });
     if (questionPanel) questionPanel.hidden = true;
     if (figureEl) figureEl.className = "stick-figure";
     if (finishTimeEl) {
@@ -1998,6 +2602,7 @@ function initBroncoDash(){
     if (waitEl) waitEl.textContent = "";
     if (figureEl) figureEl.className = "stick-figure is-waiting";
     if (losePanel) losePanel.hidden = false;
+    emitRoundComplete("broncoDash", { won: false });
   }
 
   function startGame(){
@@ -2048,7 +2653,7 @@ function initBroncoSplash(){
   const STEP_MS = 100;
   const SCROLL_BASE_SPEED = 45;
 
-  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS);
+  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS, sameSetRng());
 
   let o2 = O2_START;
   let progress = 0;
@@ -2116,6 +2721,7 @@ function initBroncoSplash(){
     if (drift) drift.stop();
     const elapsed = (Date.now() - startTime) / 1000;
     const isNewBest = recordBestTime("broncoSplash", elapsed);
+    emitRoundComplete("broncoSplash", { won: true, timeSeconds: elapsed });
     if (questionPanel) questionPanel.hidden = true;
     if (figureEl) figureEl.className = "stick-figure";
     if (finishTimeEl) {
@@ -2183,7 +2789,7 @@ function initBroncoBlitz(){
   const STEP_MS = 100;
   const LETTERS = ["A", "B", "C", "D"];
 
-  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS);
+  const nextQuestion = createQuestionQueue(PERSISTENT_GAME_QUESTIONS, sameSetRng());
 
   let score = 0;
   let streak = 0;
@@ -2288,6 +2894,7 @@ function initBroncoBlitz(){
     if (gameEl) gameEl.hidden = true;
     addPoints("broncoBlitz", score);
     const isNewBest = recordBestScore("broncoBlitz", score);
+    emitRoundComplete("broncoBlitz", { won: true, score: score });
     if (finishScoreEl) {
       finishScoreEl.innerHTML = `You scored ${score.toLocaleString()} points` + (isNewBest ? ` <span class="is-new-best">— new high score!</span>` : "") + ` — added to your lifetime total on the Stats page.`;
     }

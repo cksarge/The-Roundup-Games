@@ -39,7 +39,7 @@
         </div>
       </div>
       <a href="archive.html">Archive</a>
-      <a href="stats.html">Stats</a>
+      <a href="stats.html">Leaderboard &amp; Stats</a>
       <a href="about.html">About</a>
       <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Roundup Home ↗</a>
       <a href="https://www.brophyprep.org/" target="_blank" rel="noopener">Brophy Home ↗</a>
@@ -54,6 +54,8 @@
     <p>30 seconds on the clock. Answer A/B/C/D trivia as fast as you can — chain correct answers for a growing multiplier, and answer quickly for a speed bonus. Miss one and you're locked out for 3 seconds.</p>
     <a class="hero__back" href="index.html">← Back to all games</a>
   </div>
+
+  <div id="challengeBannerMount"></div>
 
   <div class="panel">
     <div class="panel__head">
@@ -89,8 +91,17 @@
         <button class="btn" type="button" id="blitzPlayAgainBtn">Play Again</button>
       </div>
 
+      <div id="leaderboardSubmitMount"></div>
+
     </div>
   </div>
+
+  <div class="game-extras">
+    <div id="gameStatsCardMount"></div>
+    <div id="gameShareCardMount"></div>
+  </div>
+
+  <div id="weeklyTop10Mount" class="weekly-top10"></div>
 </main>
 
 <footer>
@@ -102,9 +113,12 @@
 </footer>
 
 <script src="config.js"></script>
+<script src="leaderboard.js"></script>
 <script src="embed.js"></script>
 <script>
   initBroncoBlitz();
+  mountGamePageCards("broncoBlitz");
+  lbAttachGamePage("broncoBlitz");
 </script>
 </body>
 </html>

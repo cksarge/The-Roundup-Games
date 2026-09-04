@@ -135,10 +135,17 @@ const LB_BLOCKED = [
   "wrinkled starfish","xx","xxx","yaoi","yellow showers","yiffy","zoophilia"
 ];
 let _lbBlockedSet = null;
+let _lbMaxPhraseWords = 1;
 function lbBlockedSet(){
   if (!_lbBlockedSet) {
     _lbBlockedSet = {};
-    LB_BLOCKED.forEach(w => { const n = lbNormalizeForModeration(w); if (n) _lbBlockedSet[n] = true; });
+    LB_BLOCKED.forEach(w => {
+      const n = lbNormalizeForModeration(w);
+      if (!n) return;
+      _lbBlockedSet[n] = true;
+      const words = n.split(" ").length;
+      if (words > _lbMaxPhraseWords) _lbMaxPhraseWords = words;
+    });
   }
   return _lbBlockedSet;
 }
@@ -150,20 +157,30 @@ function lbNormalizeForModeration(str){
     .replace(/0/g, "o").replace(/[5$]/g, "s").replace(/7/g, "t")
     .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
 }
-function lbNameLooksBad(name, lastInitial){
-  const norm = lbNormalizeForModeration((name || "") + " " + (lastInitial || ""));
+/* Checks one field's text against both lists — slurs as a substring,
+   the full LDNOOBW list as whole words AND multi-word phrases (a
+   sliding window over the field's own tokens, since a 2+-word listed
+   phrase — "blow job", "dirty sanchez" — can only ever match a
+   single field on its own, never the name+initial concatenation the
+   old version checked). */
+function lbTextMatchesBlocklist(text){
+  const norm = lbNormalizeForModeration(text);
   if (!norm) return false;
+  const set = lbBlockedSet(); // also fills in _lbMaxPhraseWords
   const compact = norm.replace(/ /g, "");
   for (let i = 0; i < LB_SLUR_ROOTS.length; i++) {
     if (compact.indexOf(LB_SLUR_ROOTS[i]) !== -1) return true;
   }
-  const set = lbBlockedSet();
-  if (set[norm] || set[compact]) return true;
   const toks = norm.split(" ");
-  for (let i = 0; i < toks.length; i++) {
-    if (toks[i] && set[toks[i]]) return true;
+  for (let n = 1; n <= Math.min(_lbMaxPhraseWords, toks.length); n++) {
+    for (let i = 0; i + n <= toks.length; i++) {
+      if (set[toks.slice(i, i + n).join(" ")]) return true;
+    }
   }
   return false;
+}
+function lbNameLooksBad(name, lastInitial){
+  return lbTextMatchesBlocklist(name) || lbTextMatchesBlocklist(lastInitial);
 }
 
 /* ---------- a stable per-browser id (dedupe backstop) ---------- */

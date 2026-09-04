@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.0.4";
+const SITE_VERSION = "2.0.5";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------

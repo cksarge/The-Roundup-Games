@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stats — The Roundup Games</title>
+<title>Leaderboard &amp; Stats — The Roundup Games</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -39,7 +39,7 @@
         </div>
       </div>
       <a href="archive.html">Archive</a>
-      <a href="stats.html" aria-current="page">Stats</a>
+      <a href="stats.html" aria-current="page">Leaderboard &amp; Stats</a>
       <a href="about.html">About</a>
       <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Roundup Home ↗</a>
       <a href="https://www.brophyprep.org/" target="_blank" rel="noopener">Brophy Home ↗</a>
@@ -49,14 +49,18 @@
 
 <main class="shell">
   <div class="hero">
-    <p class="hero__eyebrow">Your Stats</p>
-    <h1>Statistics</h1>
-    <p>How many times you've won each game — plus your current streak on the daily and weekly games.</p>
+    <p class="hero__eyebrow">Leaderboard &amp; Stats</p>
+    <h1>Leaderboard &amp; Stats</h1>
+    <p>This week's top players on the shared leaderboard, plus your own win counts and streaks tracked in this browser.</p>
     <a class="hero__back" href="index.html">← Back to all games</a>
   </div>
 
+  <h2 class="section-head">Weekly Leaderboard</h2>
+  <div id="leaderboardSection"></div>
+
+  <h2 class="section-head section-head--spaced">Your Stats</h2>
   <div class="stats-grid" id="statsList"></div>
-  <p class="stats-note">Tracked in your browser on only this device &bull; Clearing browser history will clear this data</p>
+  <p class="stats-note">Your stats are tracked in your browser on only this device &bull; Clearing browser history will clear them. The leaderboard is shared and posted by choice.</p>
 </main>
 
 <footer>
@@ -68,9 +72,11 @@
 </footer>
 
 <script src="config.js"></script>
+<script src="leaderboard.js"></script>
 <script src="embed.js"></script>
 <script>
   renderStatsPage();
+  lbInitStatsPage();
 </script>
 </body>
 </html>

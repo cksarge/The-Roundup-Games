@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.0.2";
+const SITE_VERSION = "2.0.3";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -1181,9 +1181,9 @@ const STAT_GAMES = [
   { id: "printCrossword", label: "Print Edition Crossword", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false, blurb: "The crossword from The Roundup's latest print issue.", challengeMetric: "finish" },
   { id: "guessTheTeacher", label: "Guess the Teacher", retired: true, streak: true, streakUnit: "day", trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false },
   { id: "specialEdition", label: "Special Edition", streak: false, streakUnit: null, trackWins: true, trackBestTime: false, trackPoints: false, trackBestScore: false, blurb: "A one-off puzzle for school breaks and special occasions.", challengeMetric: "finish" },
+  { id: "broncoBlitz", label: "Bronco Blitz", streak: false, streakUnit: null, trackWins: false, trackBestTime: false, trackPoints: true, trackBestScore: true, blurb: "Thirty seconds of A/B/C/D trivia — chain answers for a bigger multiplier.", challengeMetric: "score" },
   { id: "broncoDash", label: "Bronco Dash", streak: false, streakUnit: null, trackWins: true, trackBestTime: true, trackPoints: false, trackBestScore: false, blurb: "Answer trivia to sprint down the track before the pace line catches you.", challengeMetric: "time" },
-  { id: "broncoSplash", label: "Bronco Splash", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false, blurb: "Answer trivia to catch your breath and swim a full lap.", challengeMetric: "time" },
-  { id: "broncoBlitz", label: "Bronco Blitz", streak: false, streakUnit: null, trackWins: false, trackBestTime: false, trackPoints: true, trackBestScore: true, blurb: "Thirty seconds of A/B/C/D trivia — chain answers for a bigger multiplier.", challengeMetric: "score" }
+  { id: "broncoSplash", label: "Bronco Splash", streak: false, streakUnit: null, trackWins: false, trackBestTime: true, trackPoints: false, trackBestScore: false, blurb: "Answer trivia to catch your breath and swim a full lap.", challengeMetric: "time" }
 ];
 
 function loadStats(){
@@ -2827,10 +2827,11 @@ function initBroncoBlitz(){
   }
 
   function updateTimerDisplay(){
-    const secs = Math.max(0, remainingMs / 1000);
-    if (timerEl) timerEl.textContent = `0:${Math.ceil(secs).toString().padStart(2, "0")}`;
+    const total = Math.ceil(Math.max(0, remainingMs / 1000));
+    const m = Math.floor(total / 60);
+    if (timerEl) timerEl.textContent = `${m}:${String(total % 60).padStart(2, "0")}`;
     if (timerFillEl) {
-      timerFillEl.style.width = `${Math.max(0, remainingMs / GAME_MS) * 100}%`;
+      timerFillEl.style.width = `${Math.min(100, Math.max(0, remainingMs / GAME_MS) * 100)}%`;
       timerFillEl.classList.toggle("is-low", remainingMs <= LOW_TIME_MS);
     }
   }
@@ -2889,8 +2890,23 @@ function initBroncoBlitz(){
       const speedBonus = Math.round(SPEED_BONUS_MAX * Math.max(0, (SPEED_BONUS_WINDOW_MS - elapsed) / SPEED_BONUS_WINDOW_MS));
       const earned = Math.round(BASE_POINTS * currentMultiplier()) + speedBonus;
       score += earned;
+      // each correct answer buys back 1s × the current streak multiplier,
+      // but the clock can never exceed GAME_MS (30s)
+      let gainedMs = 0;
+      if (endAt !== null) {
+        const capped = Math.min(endAt + Math.round(currentMultiplier() * 1000), Date.now() + GAME_MS);
+        gainedMs = Math.max(0, capped - endAt);
+        endAt = capped;
+        remainingMs = endAt - Date.now();
+      }
       updateHud();
-      if (pointsMsgEl) pointsMsgEl.textContent = `+${earned} pts` + (speedBonus > 0 ? ` (includes +${speedBonus} speed bonus)` : "");
+      updateTimerDisplay();
+      updateHudTime();
+      if (pointsMsgEl) {
+        pointsMsgEl.textContent = `+${earned} pts` +
+          (speedBonus > 0 ? ` (includes +${speedBonus} speed bonus)` : "") +
+          (gainedMs > 0 ? ` · +${(gainedMs / 1000).toFixed(2)}s on the clock` : ` · clock at max`);
+      }
       setTimeout(askQuestion, 400);
     } else {
       streak = 0;

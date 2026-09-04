@@ -280,6 +280,16 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 2.0.3 — September 2026
+- **Bronco Blitz: each correct answer adds time to the clock** — `1s ×` the
+  current streak multiplier (so +1s at ×1.00, up to +3s at the ×3.00 cap),
+  **capped so the clock never exceeds 30s**. The points toast shows the actual
+  seconds gained, or "clock at max".
+- Bronco Blitz now leads the Bronco games on the **Leaderboard & Stats** page too
+  (`STAT_GAMES` order), matching the nav and Games page.
+- Timer header shows `m:ss` now that the clock can sit at the 30s cap; bar width
+  clamped to 100%.
+
 ### Version 2.0.2 — September 2026
 - **Bronco Blitz is now first** among the persistent games — in every page's nav
   "Games" dropdown and in the Games-page card grid (`GAMES` order in `config.js`),

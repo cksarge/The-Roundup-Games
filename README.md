@@ -180,26 +180,38 @@ the data; just proceed.)*
 ```sql
 create or replace function public.reject_bad_name() returns trigger as $$
 declare
-  -- de-leet, keep single spaces, letters+space only
-  norm text := trim(regexp_replace(
-    translate(lower(coalesce(new.name,'') || ' ' || coalesce(new.last_initial,'')),
-              '4@31!|05$7', 'aaeiiioost'),
+  -- de-leet each field SEPARATELY (never concatenated — a 2+-word
+  -- listed phrase like "blow job" or "dirty sanchez" can only ever
+  -- match a single field's own words, not name+initial glued together)
+  name_norm text := trim(regexp_replace(
+    translate(lower(coalesce(new.name,'')), '4@31!|05$7', 'aaeiiioost'),
     '[^a-z]+', ' ', 'g'));
-  compact text := replace(norm, ' ', '');
+  init_norm text := trim(regexp_replace(
+    translate(lower(coalesce(new.last_initial,'')), '4@31!|05$7', 'aaeiiioost'),
+    '[^a-z]+', ' ', 'g'));
+  toks text[] := regexp_split_to_array(name_norm, ' ');
+  max_words constant int := 8;  -- comfortably covers LDNOOBW's longest phrase
+  n int; i int; phrase text;
 begin
   -- slurs / hardcore: substring match (evasion-resistant, ~no name collisions)
-  if compact ~ '(nigg|fagg|kike|spic|chink|cunt|fuck|shit|retard|tranny|wetback|coon|dyke|jigab|beaner|goatse)' then
+  if replace(name_norm,' ','') ~ '(nigg|fagg|kike|spic|chink|cunt|fuck|shit|retard|tranny|wetback|coon|dyke|jigab|beaner|goatse)'
+     or replace(init_norm,' ','') ~ '(nigg|fagg|kike|spic|chink|cunt|fuck|shit|retard|tranny|wetback|coon|dyke|jigab|beaner|goatse)' then
     raise exception 'name rejected by moderation';
   end if;
-  -- full LDNOOBW list: whole-token / whole-name only, so "Cassandra" survives "ass"
-  if exists (
-    select 1 from public.blocked_words b
-    where b.word = norm
-       or b.word = compact
-       or b.word = any(regexp_split_to_array(norm, ' '))
-  ) then
+  -- full LDNOOBW list: whole words AND multi-word phrases, checked as a
+  -- sliding window over the NAME's own tokens (so "Cassandra" survives
+  -- "ass", but "Dirty Sanchez" as a name — with any last initial — doesn't)
+  if init_norm <> '' and exists (select 1 from public.blocked_words b where b.word = init_norm) then
     raise exception 'name rejected by moderation';
   end if;
+  for n in 1..least(max_words, coalesce(array_length(toks, 1), 0)) loop
+    for i in 1..(array_length(toks, 1) - n + 1) loop
+      phrase := array_to_string(toks[i:i+n-1], ' ');
+      if exists (select 1 from public.blocked_words b where b.word = phrase) then
+        raise exception 'name rejected by moderation';
+      end if;
+    end loop;
+  end loop;
   return new;
 end;
 $$ language plpgsql;
@@ -283,6 +295,18 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 2.0.5 — September 2026
+- **Fixed: multi-word blocked names weren't actually blocked.** Both the
+  client-side check and the Postgres trigger normalized `name + " " +
+  lastInitial` into one string, so a 2+-word listed phrase ("blow job",
+  "dirty sanchez") could only ever match with the last-initial field left
+  blank. Now `name` and `lastInitial` are checked separately, and `name` is
+  matched against the LDNOOBW list with a sliding window sized to the list's
+  own longest phrase (not a hardcoded number) — so multi-word terms are
+  caught regardless of last initial, while non-matches (`Cassandra`, bare
+  `Rosy`) still pass. **Re-run the trigger SQL** in the Bad-name filter
+  section — the fix is server-side too.
 
 ### Version 2.0.4 — September 2026
 - **Print Edition Crossword** now has a leaderboard board — **Fastest solve**

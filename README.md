@@ -91,8 +91,9 @@ The "Share This Game" card has two separate links:
 - **Challenge them** — the same link plus `?ch=1&kind=<metric>&by=<name>&beat=<n>`,
   which shows the opener a "beat this" banner.
 
-The player's name / last initial / grade lives in `localStorage` under
-`roundup:identity` — the **same** record the leaderboard sign-in uses.
+The player's name / last initial / grad year lives in `localStorage` under
+`roundup:identity` — the **same** record the leaderboard sign-in uses. (The
+`grade` field holds a 2-digit graduation year, e.g. `27`, shown as `’27`.)
 
 ## Leaderboard (Supabase)
 
@@ -128,7 +129,7 @@ create table if not exists public.scores (
   constraint scores_value_ok  check (value >= 0 and value < 10000000),
   constraint scores_name_len  check (char_length(name) between 1 and 20),
   constraint scores_init_len  check (char_length(last_initial) <= 1),
-  constraint scores_grade_ok  check (grade in ('','9','10','11','12'))
+  constraint scores_grade_ok  check (grade in ('','27','28','29','30','31','32','33'))  -- 2-digit grad year
 );
 create index if not exists scores_lookup
   on public.scores (game_id, board, week_key, metric, value);
@@ -139,9 +140,13 @@ create policy "public insert" on public.scores for insert to anon with check (tr
 -- no update/delete policy → the anon key can't change or remove rows (you can, from the dashboard)
 ```
 
-> Already ran an earlier version of this that only allowed `metric in ('score','time','finish')`?
-> Fix it with:
-> `alter table public.scores drop constraint scores_metric_ok, add constraint scores_metric_ok check (metric in ('score','time','streak'));`
+> Already created the table from an earlier version? Bring the two constraints up to date:
+> ```sql
+> alter table public.scores drop constraint scores_metric_ok,
+>   add constraint scores_metric_ok check (metric in ('score','time','streak'));
+> alter table public.scores drop constraint scores_grade_ok,
+>   add constraint scores_grade_ok check (grade in ('','27','28','29','30','31','32','33'));
+> ```
 
 ### Bad-name filter (the real moderation layer)
 
@@ -206,7 +211,7 @@ Because the full list is matched as **whole words**, a real first name that only
 *contains* a listed term (Cassandra, Cassidy, Titus…) is fine; a name that **is**
 one (or a token of it) is rejected and the form says "pick another."
 
-Every row carries `name` + `grade` + `created_at` + a random per-browser
+Every row carries `name` + grad year + `created_at` + a random per-browser
 `client_id`, and you can delete any row from the dashboard — that's the trace if
 you need one. (No IP or other network metadata is collected.)
 
@@ -272,6 +277,13 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 2.0.1 — September 2026
+- Leaderboard identity: **"Grade" → "Grad year"** everywhere it's shown (form
+  label, "posting as" line, board rows), with options `’27`–`’33`. Stored as a
+  2-digit year in the same `grade` field; `saveIdentity` now also accepts `2027`
+  or `’27`. Needs the `scores_grade_ok` constraint updated in Supabase (SQL in
+  the Leaderboard section).
 
 ### Version 2.0 — September 2026
 

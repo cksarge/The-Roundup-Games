@@ -254,7 +254,7 @@ function lbBoardRowsHtml(rows, bcfg, meName){
     <ol class="lb-list">
       ${rows.slice(0, 10).map((row, i) => {
         const who = escapeHtml(row.name || "—") + (row.last_initial ? " " + escapeHtml(row.last_initial) + "." : "");
-        const grade = row.grade ? `<span class="lb-grade">Gr.&nbsp;${escapeHtml(row.grade)}</span>` : "";
+        const grade = row.grade ? `<span class="lb-grade">&rsquo;${escapeHtml(row.grade)}</span>` : "";
         const num = Number(row.value);
         const mine = meName && (row.name || "").toLowerCase() === meName.toLowerCase() ? " is-me" : "";
         return `
@@ -304,7 +304,7 @@ function lbRenderIdentityGate(mountEl, onSaved){
   mountEl.innerHTML = `
     <form class="lb-identity" autocomplete="off">
       <p class="lb-identity__lead">${id.name
-        ? `Posting as <strong>${escapeHtml(formatIdentity(id))}</strong>${id.grade ? " · Gr. " + escapeHtml(id.grade) : ""}.`
+        ? `Posting as <strong>${escapeHtml(formatIdentity(id))}</strong>${id.grade ? " · &rsquo;" + escapeHtml(id.grade) : ""}.`
         : "Pick a name to post to the leaderboard — first name and last initial only."}</p>
       <div class="lb-identity__fields">
         <label>First name
@@ -313,10 +313,10 @@ function lbRenderIdentityGate(mountEl, onSaved){
         <label>Last initial
           <input type="text" name="lastInitial" maxlength="1" value="${escapeHtml(id.lastInitial)}">
         </label>
-        <label>Grade
+        <label>Grad year
           <select name="grade">
             <option value=""${id.grade ? "" : " selected"}>—</option>
-            ${["9", "10", "11", "12"].map(g => `<option value="${g}"${id.grade === g ? " selected" : ""}>${g}</option>`).join("")}
+            ${["27", "28", "29", "30", "31", "32", "33"].map(g => `<option value="${g}"${id.grade === g ? " selected" : ""}>&rsquo;${g}</option>`).join("")}
           </select>
         </label>
       </div>

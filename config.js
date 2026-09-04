@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.0";
+const SITE_VERSION = "2.0.1";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -1895,7 +1895,8 @@ function renderStatsPage(){
 
 const IDENTITY_STORAGE_KEY = "roundup:identity";
 
-/* { name, lastInitial, grade } — any field may be "". */
+/* { name, lastInitial, grade } — `grade` holds a 2-digit graduation
+   year ("27".."33"), shown as "’27"; any field may be "". */
 function loadIdentity(){
   const raw = loadGameState(IDENTITY_STORAGE_KEY);
   if (!raw || typeof raw !== "object") return { name: "", lastInitial: "", grade: "" };
@@ -1909,7 +1910,10 @@ function saveIdentity(identity){
   saveGameState(IDENTITY_STORAGE_KEY, {
     name: (identity.name || "").trim().slice(0, 20),
     lastInitial: (identity.lastInitial || "").trim().slice(0, 1).toUpperCase(),
-    grade: (identity.grade || "").trim().replace(/[^0-9]/g, "").slice(0, 2)
+    grade: (function(g){
+      const d = String(g || "").replace(/[^0-9]/g, "");   // "'27" / "27" / "2027" -> "27"
+      return d.length === 4 ? d.slice(2) : d.slice(0, 2);
+    })(identity.grade)
   });
 }
 /* "Carter K." / "Carter" / "" — name + last initial, no grade
@@ -1927,7 +1931,7 @@ function openIdentityPrompt(onDone){
   if (name === null) return;
   const lastInitial = window.prompt("Last initial (one letter):", cur.lastInitial || "");
   if (lastInitial === null) return;
-  const grade = window.prompt("Grade number, 9–12 (optional — leave blank to skip):", cur.grade || "");
+  const grade = window.prompt("Grad year — 27 to 33 (optional; e.g. 27 for the class of 2027):", cur.grade || "");
   if (grade === null) return;
   saveIdentity({ name: name, lastInitial: lastInitial, grade: grade });
   if (typeof onDone === "function") onDone();
@@ -2136,7 +2140,7 @@ function renderGameShareCard(mountId, gameId){
         <p class="sidecard__who">
           ${
             who
-              ? `Playing as <strong>${escapeHtml(who)}</strong>${id.grade ? ` &middot; Gr.&nbsp;${escapeHtml(id.grade)}` : ""}`
+              ? `Playing as <strong>${escapeHtml(who)}</strong>${id.grade ? ` &middot; &rsquo;${escapeHtml(id.grade)}` : ""}`
               : `<em>No name set &mdash; your links will just say &ldquo;a friend.&rdquo;</em>`
           }
           <button type="button" class="sidecard__editname" data-act="edit">${who ? "Edit" : "Set a name"}</button>

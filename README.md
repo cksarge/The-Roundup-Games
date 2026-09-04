@@ -83,11 +83,13 @@ events dispatched by the win/score recorders in `config.js`:
 
 The "Share This Game" card has two separate links:
 
-- **Play the same set** — the identical game, *no score attached*. For the Bronco
-  games this is a seeded `?set=<seed>` link (fed into `makeSeededRandom` →
-  `createQuestionQueue`, so the friend gets the exact same questions in the exact
-  same order). For the puzzle games everyone already plays the same weekly embed,
-  so it's just the plain URL.
+- **Play the same set** — the identical game, *no score attached*, copied as a
+  bare URL (nothing else). For the Bronco games it's a seeded `?set=<seed>` link
+  (fed into `makeSeededRandom` → `createQuestionQueue`); the seed for a page view
+  is fixed once by `currentSetSeed()` — the `?set=` it was opened with, or one
+  random seed minted on first use — so the run being played and the link shown
+  always match. For the puzzle games everyone already plays the same weekly
+  embed, so it's just the plain URL.
 - **Challenge them** — the same link plus `?ch=1&kind=<metric>&by=<name>&beat=<n>`,
   which shows the opener a "beat this" banner.
 

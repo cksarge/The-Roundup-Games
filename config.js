@@ -1955,6 +1955,18 @@ function copyText(text){
     return Promise.resolve(false);
   }
 }
+/* Flip a copy button to "Copied!" for 3s, then restore its label. */
+function flashCopied(btn){
+  if (btn._copyReset) clearTimeout(btn._copyReset);
+  else btn.dataset.copyLabel = btn.textContent;
+  btn.textContent = "Copied!";
+  btn.classList.add("is-copied");
+  btn._copyReset = setTimeout(() => {
+    btn.textContent = btn.dataset.copyLabel;
+    btn.classList.remove("is-copied");
+    btn._copyReset = null;
+  }, 3000);
+}
 
 /* This page's own URL with any existing query/hash stripped — the
    base a challenge link is built on, so links keep working wherever
@@ -2015,24 +2027,22 @@ function buildChallengeUrl(gameId){
 function gameUsesSeededSet(gameId){
   return gameId === "broncoDash" || gameId === "broncoSplash" || gameId === "broncoBlitz";
 }
-/* `seedOverride` keeps the seed stable across re-renders of the
-   share card (otherwise a fresh one would be minted every redraw and
-   a link someone already copied would go stale). */
-function buildSameSetUrl(gameId, seedOverride){
-  if (!gameUsesSeededSet(gameId)) return gameBaseUrl();
-  // pass along the seed we're currently playing, if any, so a shared
-  // set can be handed onward unchanged; otherwise use the override /
-  // mint a fresh one
-  const seed = readQueryParam("set") || seedOverride || randomSetSeed();
-  return `${gameBaseUrl()}?set=${encodeURIComponent(seed)}`;
+/* ONE seed per page view: the ?set= the page was opened with, or —
+   on a fresh visit to a seeded game — a random one minted once and
+   reused. So the run the player is actually playing (sameSetRng
+   below feeds this into createQuestionQueue) and the "same set" link
+   in the share card are always the same seed, even the very first
+   time on a plain URL. */
+let _sessionSetSeed = null;
+function currentSetSeed(){
+  const fromUrl = readQueryParam("set");
+  if (fromUrl) return fromUrl;
+  if (!_sessionSetSeed) _sessionSetSeed = randomSetSeed();
+  return _sessionSetSeed;
 }
-function sameSetBlurbFor(gameId, seedOverride){
-  const game = STAT_GAMES.find(g => g.id === gameId);
-  if (!game) return "";
-  const who = formatIdentity();
-  const what = gameUsesSeededSet(gameId) ? "the exact same set of questions" : "the exact same puzzle";
-  const lead = who ? `${who} wants you to play ${game.label} — ${what}, no score attached:` : `Play ${game.label} — ${what}, no score attached:`;
-  return `${lead}\n${buildSameSetUrl(gameId, seedOverride)}`;
+function buildSameSetUrl(gameId){
+  if (!gameUsesSeededSet(gameId)) return gameBaseUrl();
+  return `${gameBaseUrl()}?set=${encodeURIComponent(currentSetSeed())}`;
 }
 
 /* The paste-anywhere blurb shown in the Challenge card. Plain text
@@ -2122,13 +2132,11 @@ function renderGameShareCard(mountId, gameId){
 
   const seeded = gameUsesSeededSet(gameId);
   const sameSetWhat = seeded ? "same questions, same order" : "the same puzzle";
-  // one stable seed for the life of this card
-  const cardSeed = seeded ? (readQueryParam("set") || randomSetSeed()) : null;
 
   function draw(){
     const id = loadIdentity();
     const who = formatIdentity(id);
-    const sameSetText = sameSetBlurbFor(gameId, cardSeed);
+    const sameSetLink = buildSameSetUrl(gameId);   // bare URL — nothing else
     const challengeText = shareBlurbFor(gameId);
     const challengeUrl = buildChallengeUrl(gameId);
 
@@ -2148,8 +2156,8 @@ function renderGameShareCard(mountId, gameId){
 
         <div class="sharegroup">
           <div class="sharegroup__label">Play the same set</div>
-          <p class="sharegroup__note">Sends a friend into ${escapeHtml(seeded ? "this exact game" : "this exact puzzle")} — <strong>${escapeHtml(sameSetWhat)}</strong>, with <strong>nothing about your score attached</strong>. Just so you can compare fairly.</p>
-          <textarea id="${mountId}SameSet" class="sidecard__text" rows="3" readonly>${escapeHtml(sameSetText)}</textarea>
+          <p class="sharegroup__note">Sends a friend into ${escapeHtml(seeded ? "this exact game" : "this exact puzzle")} — <strong>${escapeHtml(sameSetWhat)}</strong>, with <strong>nothing about your score attached</strong>. Just so you can compare fairly. The copied link is just the URL, nothing else.</p>
+          <textarea id="${mountId}SameSet" class="sidecard__text" rows="2" readonly>${escapeHtml(sameSetLink)}</textarea>
           <div class="sidecard__actions">
             <button type="button" class="btn" data-act="copy-sameset">Copy same-set link</button>
             <button type="button" class="btn btn--ghost" data-act="share-sameset"${navigator.share ? "" : " hidden"}>Share&hellip;</button>
@@ -2181,11 +2189,11 @@ function renderGameShareCard(mountId, gameId){
       btn.addEventListener("click", () => {
         const act = btn.dataset.act;
         if (act === "copy-sameset") {
-          copyText(sameSetText).then(ok => hint(ok ? "Same-set link copied — no score goes with it." : "Couldn’t copy automatically — select the text and copy it."));
+          copyText(sameSetLink).then(ok => ok ? flashCopied(btn) : hint("Couldn’t copy automatically — select the text and copy it."));
         } else if (act === "copy-challenge") {
-          copyText(challengeText).then(ok => hint(ok ? "Challenge copied — paste it anywhere." : "Couldn’t copy automatically — select the text and copy it."));
+          copyText(challengeText).then(ok => ok ? flashCopied(btn) : hint("Couldn’t copy automatically — select the text and copy it."));
         } else if (act === "share-sameset" && navigator.share) {
-          navigator.share({ text: sameSetText, url: buildSameSetUrl(gameId, cardSeed) }).catch(() => {});
+          navigator.share({ url: sameSetLink }).catch(() => {});
         } else if (act === "share-challenge" && navigator.share) {
           navigator.share({ text: challengeText, url: challengeUrl }).catch(() => {});
         } else if (act === "edit") {
@@ -2350,12 +2358,11 @@ function createQuestionQueue(pool, rng){
   };
 }
 
-/* If this page was opened from a "play the same set" link
-   (?set=SEED), a seeded RNG for that seed; otherwise null (→ normal
-   random run). The Bronco engines pass this into createQuestionQueue. */
+/* Seeded RNG for this page view's set seed (see currentSetSeed) —
+   the Bronco engines pass this into createQuestionQueue so the run
+   always matches the "same set" link the share card shows. */
 function sameSetRng(){
-  const seed = readQueryParam("set");
-  return seed ? makeSeededRandom(seed) : null;
+  return makeSeededRandom(currentSetSeed());
 }
 
 /* Renders one question into `${prefix}QuestionText` / `${prefix}Choices`

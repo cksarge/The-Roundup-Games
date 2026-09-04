@@ -391,6 +391,8 @@ a{ color:inherit; }
   transition:background .15s ease, color .15s ease, border-color .15s ease;
 }
 .btn:hover{ background:var(--gold); border-color:var(--gold); color:var(--maroon-950); }
+.btn.is-copied,
+.btn.is-copied:hover{ background:#3E6B3B; border-color:#3E6B3B; color:var(--paper); }
 .btn--ghost{
   background:transparent;
   color:var(--maroon-800);

@@ -280,6 +280,17 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 2.0.2 — September 2026
+- **Bronco Blitz is now first** among the persistent games — in every page's nav
+  "Games" dropdown and in the Games-page card grid (`GAMES` order in `config.js`),
+  ahead of Bronco Dash and Splash.
+- **Bronco Blitz HUD gained a "Time left" readout** between Score and Streak: plain
+  whole seconds until the last 10s, then it turns red and switches to `SS:CC`
+  (seconds : hundredths), repainted fast for a live countdown. The top timer bar
+  now also turns red for the final 10s (was 5s — `LOW_TIME_MS` 5000 → 10000). The
+  game clock is now driven off a wall-clock `endAt` timestamp so the bar, the
+  header time, and the HUD readout all agree.
+
 ### Version 2.0.1 — September 2026
 - Leaderboard identity: **"Grade" → "Grad year"** everywhere it's shown (form
   label, "posting as" line, board rows), with options `’27`–`’33`. Stored as a

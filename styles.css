@@ -1649,7 +1649,7 @@ footer{
   background:var(--maroon-800);
   transition:width .1s linear, background .2s ease;
 }
-.trivia-timerbar__fill.is-low{ background:var(--maroon-600); }
+.trivia-timerbar__fill.is-low{ background:#C0392B; }
 
 .trivia-hud{
   display:flex;
@@ -1675,6 +1675,9 @@ footer{
   color:var(--maroon-900);
 }
 .trivia-hud__stat--streak.is-hot strong{ color:var(--gold-dim); }
+/* final 10 seconds — the "Time left" readout goes SS:CC and red */
+.trivia-hud__stat--time strong{ font-variant-numeric:tabular-nums; }
+.trivia-hud__stat--time.is-low strong{ color:#C0392B; }
 
 .game-question__choice .choice-letter{
   font-family:var(--font-mono);

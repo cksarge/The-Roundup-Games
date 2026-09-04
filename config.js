@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.0.1";
+const SITE_VERSION = "2.0.2";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -638,6 +638,15 @@ const GAMES = [
     category: "daily"
   },
   {
+    id: "bronco-blitz",
+    title: "Bronco Blitz",
+    blurb: "30 seconds, A/B/C/D trivia — chain correct answers for a growing multiplier and race the clock for a speed bonus.",
+    date: "Always Available",
+    difficulty: null,
+    href: "bronco-blitz.html",
+    category: "persistent"
+  },
+  {
     id: "bronco-dash",
     title: "Bronco Dash",
     blurb: "Race down the track, answering questions to sprint ahead — reach the finish line as fast as you can.",
@@ -653,15 +662,6 @@ const GAMES = [
     date: "Always Available",
     difficulty: null,
     href: "bronco-splash.html",
-    category: "persistent"
-  },
-  {
-    id: "bronco-blitz",
-    title: "Bronco Blitz",
-    blurb: "30 seconds, A/B/C/D trivia — chain correct answers for a growing multiplier and race the clock for a speed bonus.",
-    date: "Always Available",
-    difficulty: null,
-    href: "bronco-blitz.html",
     category: "persistent"
   },
   {
@@ -2785,6 +2785,8 @@ function initBroncoBlitz(){
   const scoreEl = document.getElementById(`${prefix}Score`);
   const streakEl = document.getElementById(`${prefix}Streak`);
   const streakStatEl = document.getElementById(`${prefix}StreakStat`);
+  const timeLeftEl = document.getElementById(`${prefix}TimeLeft`);
+  const timeStatEl = document.getElementById(`${prefix}TimeStat`);
   const textEl = document.getElementById(`${prefix}QuestionText`);
   const choicesEl = document.getElementById(`${prefix}Choices`);
   const pointsMsgEl = document.getElementById(`${prefix}PointsMsg`);
@@ -2792,7 +2794,7 @@ function initBroncoBlitz(){
   if (!startBtn) return;
   enableKeyboardAnswers(`${prefix}Choices`);
 
-  const GAME_MS = 30000, LOW_TIME_MS = 5000;
+  const GAME_MS = 30000, LOW_TIME_MS = 10000;
   const BASE_POINTS = 100;
   const STREAK_STEP = 0.25, STREAK_MULTIPLIER_CAP = 3;
   const WRONG_LOCKOUT_MS = 3000;
@@ -2805,9 +2807,11 @@ function initBroncoBlitz(){
   let score = 0;
   let streak = 0;
   let remainingMs = GAME_MS;
+  let endAt = null;            // wall-clock end time — the accurate source of "time left"
   let questionShownAt = null;
   let finished = false;
   let stepTimer = null;
+  let hudTimer = null;         // fast repaint of the HUD "Time left" readout
   let waitTimeout = null;
 
   /* 0 correct in a row -> 1x. Each additional one in a row adds
@@ -2828,6 +2832,24 @@ function initBroncoBlitz(){
     if (timerFillEl) {
       timerFillEl.style.width = `${Math.max(0, remainingMs / GAME_MS) * 100}%`;
       timerFillEl.classList.toggle("is-low", remainingMs <= LOW_TIME_MS);
+    }
+  }
+
+  /* HUD "Time left" — plain whole seconds ("18") while more than
+     LOW_TIME_MS remains; in the final 10s it turns red and switches
+     to SS:CC (seconds : hundredths), repainted fast for a live
+     countdown feel. */
+  function updateHudTime(){
+    const left = endAt !== null ? Math.max(0, endAt - Date.now()) : Math.max(0, remainingMs);
+    const low = left <= LOW_TIME_MS;
+    if (timeStatEl) timeStatEl.classList.toggle("is-low", low);
+    if (!timeLeftEl) return;
+    if (low) {
+      const s = Math.floor(left / 1000);
+      const cs = Math.floor((left % 1000) / 10);
+      timeLeftEl.textContent = `${String(s).padStart(2, "0")}:${String(cs).padStart(2, "0")}`;
+    } else {
+      timeLeftEl.textContent = `${Math.ceil(left / 1000)}`;
     }
   }
 
@@ -2891,7 +2913,7 @@ function initBroncoBlitz(){
 
   function step(){
     if (finished) return;
-    remainingMs -= STEP_MS;
+    remainingMs = endAt !== null ? (endAt - Date.now()) : (remainingMs - STEP_MS);
     updateTimerDisplay();
     if (remainingMs <= 0) endGame();
   }
@@ -2899,7 +2921,11 @@ function initBroncoBlitz(){
   function endGame(){
     finished = true;
     clearInterval(stepTimer);
+    clearInterval(hudTimer);
     clearTimeout(waitTimeout);
+    remainingMs = 0;
+    updateTimerDisplay();
+    updateHudTime();
     if (choicesEl) choicesEl.querySelectorAll("[data-choice-index]").forEach(b => { b.disabled = true; });
     if (waitEl) waitEl.textContent = "";
     if (gameEl) gameEl.hidden = true;
@@ -2916,15 +2942,19 @@ function initBroncoBlitz(){
     score = 0;
     streak = 0;
     remainingMs = GAME_MS;
+    endAt = Date.now() + GAME_MS;
     finished = false;
     if (startPanel) startPanel.hidden = true;
     if (finishPanel) finishPanel.hidden = true;
     if (gameEl) gameEl.hidden = false;
     updateHud();
     updateTimerDisplay();
+    updateHudTime();
     clearInterval(stepTimer);
+    clearInterval(hudTimer);
     clearTimeout(waitTimeout);
     stepTimer = setInterval(step, STEP_MS);
+    hudTimer = setInterval(updateHudTime, 40);
     askQuestion();
   }
 

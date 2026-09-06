@@ -199,6 +199,20 @@ function isoWeekKey(input){
 
 const WEEKLY_PUZZLES = [
   {
+    isoDate: "2026-09-07",
+    date: "Week of September 7, 2026",
+    crossword: {
+      difficulty: "5/5",
+      theme: "Red, White, and Black",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupweeksep7&set=carter"
+    },
+    wordSearch: {
+      difficulty: "3/5",
+      theme: "Grad@Grad",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/wordsearch?id=roundupsearchweeksep7&set=carter"
+    }
+  },
+  {
     isoDate: "2026-08-31",
     date: "Week of August 31, 2026",
     crossword: {

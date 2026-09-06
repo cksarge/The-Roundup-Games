@@ -296,6 +296,22 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 2.0.6 — September 2026
+- **Games page: the "nothing live" Special Edition card now sits at the very
+  bottom under its own "Limited Time Games" divider**, instead of being tacked
+  onto the end of the "Persistent Games — Always Available" grid. The new
+  divider + `#limitedTimeGameCards` grid in `games.html` stay `hidden` and empty
+  while a Special Edition *is* live (only the top banner shows then);
+  `renderSpecialHomepageCard()` toggles both `hidden` flags — showing them only
+  when `SPECIAL_EDITION` is null, hiding them again when one is live. Needed a
+  new `.games-divider[hidden], .games[hidden]{ display:none }` rule in
+  `styles.css` — the `display:flex`/`grid` on those was overriding the plain
+  `hidden` attribute.
+- **Renamed the first Games-page divider "Today & This Week" → "This Week & In
+  Print"** (it covers the Weekly puzzles and the Print Edition crossword).
+- Extended the current Special Edition ("Welcome to The Roundup Games") from
+  `2026-09-04` to `2026-09-13` in `SPECIAL_PUZZLES`.
+
 ### Version 2.0.5 — September 2026
 - **Fixed: multi-word blocked names weren't actually blocked.** Both the
   client-side check and the Postgres trigger normalized `name + " " +

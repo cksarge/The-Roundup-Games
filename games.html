@@ -57,11 +57,16 @@
 
   <div id="specialBanner"></div>
 
-  <div class="games-divider"><span>Today &amp; This Week</span></div>
+  <div class="games-divider"><span>This Week &amp; In Print</span></div>
   <div class="games" id="dailyGameCards"></div>
 
   <div class="games-divider"><span>Persistent Games — Always Available</span></div>
   <div class="games" id="persistentGameCards"></div>
+
+  <!-- Only shown when no Special Edition is live — renderSpecialHomepageCard
+       reveals this divider and drops the "check back" card in below. -->
+  <div class="games-divider" id="limitedTimeDivider" hidden><span>Limited Time Games</span></div>
+  <div class="games" id="limitedTimeGameCards" hidden></div>
 </main>
 
 <footer>

@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.0.5";
+const SITE_VERSION = "2.0.6";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -313,7 +313,7 @@ const WEEKLY_PUZZLES = [
 const SPECIAL_PUZZLES = [
   {
     startIsoDate: "2026-08-31",
-    endIsoDate: "2026-09-04",
+    endIsoDate: "2026-09-13",
     date: "First Week of Roundup Games",
     theme: "Welcome to The Roundup Games",
     difficulty: "3/5",
@@ -1064,13 +1064,14 @@ if (location.search.indexOf("debug=puzzle") !== -1) {
    homepage this banner is the ONLY game shown; when nothing is live
    the homepage shows no game content at all.
    Not live: on games.html only, a normal card at the very bottom of
-   the persistent games grid (right under Bronco Blitz), still
-   linking to special-edition.html (which explains there's nothing
-   live right now). The homepage has no such grid, so it simply
-   shows nothing. */
+   the page under its own "Limited Time Games" divider (which stays
+   hidden while a Special Edition is live), still linking to
+   special-edition.html (which explains there's nothing live right
+   now). The homepage has no such grid, so it simply shows nothing. */
 function renderSpecialHomepageCard(){
   const bannerMount = document.getElementById("specialBanner");
-  const gridMount = document.getElementById("persistentGameCards");
+  const gridMount = document.getElementById("limitedTimeGameCards");
+  const divider = document.getElementById("limitedTimeDivider");
 
   if (SPECIAL_EDITION) {
     if (bannerMount) {
@@ -1083,11 +1084,17 @@ function renderSpecialHomepageCard(){
         </a>
       `;
     }
+    // A Special Edition is live — it shows as the banner above, so the
+    // bottom "Limited Time Games" section stays hidden and empty.
+    if (divider) divider.hidden = true;
+    if (gridMount) { gridMount.hidden = true; gridMount.innerHTML = ""; }
     return;
   }
 
   if (bannerMount) bannerMount.innerHTML = "";
   if (!gridMount) return;
+  if (divider) divider.hidden = false;
+  gridMount.hidden = false;
   const card = document.createElement("article");
   card.className = "game-card";
   card.innerHTML = `

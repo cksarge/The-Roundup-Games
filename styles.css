@@ -301,6 +301,10 @@ a{ color:inherit; }
   gap:1rem;
   margin:1.2rem 0 0.2rem;
 }
+/* `display:flex`/`grid` below would otherwise beat the `hidden` attribute —
+   the "Limited Time Games" section relies on `hidden` to stay out of view
+   while a Special Edition is live. */
+.games-divider[hidden], .games[hidden]{ display:none; }
 .games-divider::before, .games-divider::after{
   content:"";
   flex:1;

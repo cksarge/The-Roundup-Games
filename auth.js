@@ -291,11 +291,6 @@
       }
     };
     if (opts.captchaToken) options.captchaToken = opts.captchaToken;
-    // If "Confirm email" is left ON in Supabase, the confirmation link
-    // brings the player back to their profile (needs this URL in the
-    // Auth → URL Configuration → Redirect URLs allowlist; harmless
-    // otherwise — Supabase just falls back to the Site URL).
-    try { options.emailRedirectTo = location.origin + location.pathname; } catch (e) {}
     const { data, error } = await sb.auth.signUp({
       email: (opts.email || "").trim(),
       password: opts.password || "",

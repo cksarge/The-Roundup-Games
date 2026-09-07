@@ -415,6 +415,16 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 2.1.2 — September 2026
+
+- **`?ignoresort=true` now blocks every leaderboard write.** That preview switch
+  (`PREVIEW_UNRELEASED`) surfaces not-yet-released puzzles as "current," so a
+  score from such a session would be for a puzzle nobody else can play yet.
+  `lbInsert()` — the one choke point for all Supabase score writes — refuses
+  outright while it's on; the submit prompts say "preview mode" instead of
+  offering to post; and `freezePuzzleSolve()` doesn't persist a preview solve, so
+  it can't be parked on the device and posted from a normal visit later.
+
 ### Version 2.1.1 — September 2026
 
 - **Dropped email confirmation entirely.** The site sends no email of any kind:

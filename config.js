@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.1.1";
+const SITE_VERSION = "2.1.2";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -535,7 +535,10 @@ const PERSISTENT_GAME_QUESTIONS = [
    default, changes nothing about what a normal visitor sees, and
    nothing on the site links to or mentions it. Streak/stat logic is
    deliberately NOT affected (see getPublishedEntries), so a preview
-   visit can't credit a win for a puzzle that isn't really out yet. */
+   visit can't credit a win for a puzzle that isn't really out yet —
+   and leaderboard.js refuses EVERY Supabase score write while this is
+   on (see lbScoreSavingBlocked), so a preview solve can't be posted
+   either. */
 const PREVIEW_UNRELEASED = location.search.indexOf("ignoresort=true") !== -1;
 
 /* Today's date as "yyyy-mm-dd", built from local date parts (not
@@ -988,6 +991,10 @@ function freezePuzzleSolve(category, winId, timeSeconds, assisted){
     : null;
   const rec = { at: Date.now(), t: t };
   if (assisted) rec.assisted = true;
+  // Preview mode (?ignoresort=true): hand back the record but DON'T
+  // persist it, so a solve of a not-yet-released puzzle can't be
+  // parked on this device and posted from a normal visit later.
+  if (typeof PREVIEW_UNRELEASED !== "undefined" && PREVIEW_UNRELEASED) return rec;
   saveGameState(key, rec);
   return rec;
 }

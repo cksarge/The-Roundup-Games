@@ -1,16 +1,20 @@
 /* ================================================================
    THE ROUNDUP GAMES — LEADERBOARD (Supabase)
    ----------------------------------------------------------------
-   Talks to Supabase's auto-generated REST API (PostgREST) with plain
-   fetch — no SDK, no build step. Loaded AFTER config.js, so it can
-   use leaderboardEnabled(), isoWeekKey(), loadIdentity()/saveIdentity(),
+   Board READS use Supabase's REST API (PostgREST) with plain fetch.
+   Board WRITES go through the supabase-js client built in auth.js
+   (window.sbClient), so they carry the signed-in user's JWT —
+   posting a score needs an account now. Loaded AFTER config.js and
+   auth.js, so it can use leaderboardEnabled(), isoWeekKey(),
+   currentUser(), currentProfile(), authIdentity(), loadIdentity(),
    formatIdentity(), computeStreak(), puzzleSolveRecord(), escapeHtml(),
    formatTime().
 
-   The table + Row Level Security + the name-check trigger are set up
-   in Supabase — see the "Leaderboard (Supabase)" section of README.md
-   for that SQL. Blank SUPABASE_URL / SUPABASE_ANON_KEY in config.js
-   to switch every bit of this back off.
+   The tables + Row Level Security + the profile name-stamp / name-check
+   triggers are set up in Supabase — see the "Accounts (Supabase Auth)"
+   and "Leaderboard (Supabase)" sections of README.md for that SQL.
+   Blank SUPABASE_URL / SUPABASE_ANON_KEY in config.js to switch every
+   bit of this (accounts + leaderboard) back off.
 
    Boards, per game:
      metric "score"  → points, higher is better   (Bronco Blitz)
@@ -62,139 +66,19 @@ function lbBoardConfig(gameId, key){
   return g.boards.find(b => b.key === key) || g.boards[0] || null;
 }
 
-/* ---------- name moderation (client side) ----------
-   Instant feedback in the form + a stop before anything is sent. The
-   AUTHORITATIVE check is the name-check TRIGGER on the Supabase table
-   (README "Leaderboard (Supabase)") — keep this list and the
-   `blocked_words` table (blocked-words.csv / blocked-words.sql) in sync.
+/* ---------- name moderation ----------
+   The blocklist + lbNameLooksBad() / lbTextMatchesBlocklist() now live
+   in config.js (so profile.html can screen a sign-up's first name
+   without loading this file). They're global; this file just calls
+   them. The AUTHORITATIVE check is the name-check TRIGGER on Supabase
+   (on the `profiles` table — see the README "Accounts" section). */
 
-   Two passes, both over a de-leeted (b4d -> bad) version:
-     • LB_SLUR_ROOTS  — substring match. Slurs / hardcore profanity
-       where "xXfaggotXx"-style evasion is the real risk and a
-       collision with a real student name is ~nil.
-     • LB_BLOCKED     — the full LDNOOBW English list, matched only as
-       a WHOLE token or the whole name, so it can't nuke "Cassandra"
-       for containing "ass".
-   LDNOOBW: github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words */
-const LB_SLUR_ROOTS = [
-  "nigg","fagg","kike","spic","chink","cunt","fuck","shit","retard",
-  "tranny","wetback","coon","dyke","jigab","beaner","goatse"
-];
-const LB_BLOCKED = [
-  "2g1c","2 girls 1 cup","acrotomophilia","alabama hot pocket","alaskan pipeline","anal",
-  "anilingus","anus","apeshit","arsehole","ass","asshole","assmunch","auto erotic","autoerotic",
-  "babeland","baby batter","baby juice","ball gag","ball gravy","ball kicking","ball licking",
-  "ball sack","ball sucking","bangbros","bangbus","bareback","barely legal","barenaked",
-  "bastard","bastardo","bastinado","bbw","bdsm","beaner","beaners","beaver cleaver",
-  "beaver lips","beastiality","bestiality","big black","big breasts","big knockers","big tits",
-  "bimbos","birdlock","bitch","bitches","black cock","blonde action","blonde on blonde action",
-  "blowjob","blow job","blow your load","blue waffle","blumpkin","bollocks","bondage","boner",
-  "boob","boobs","booty call","brown showers","brunette action","bukkake","bulldyke",
-  "bullet vibe","bullshit","bung hole","bunghole","busty","butt","buttcheeks","butthole",
-  "camel toe","camgirl","camslut","camwhore","carpet muncher","carpetmuncher",
-  "chocolate rosebuds","cialis","circlejerk","cleveland steamer","clit","clitoris",
-  "clover clamps","clusterfuck","cock","cocks","coprolagnia","coprophilia","cornhole","coon",
-  "coons","creampie","cum","cumming","cumshot","cumshots","cunnilingus","cunt","darkie",
-  "date rape","daterape","deep throat","deepthroat","dendrophilia","dick","dildo","dingleberry",
-  "dingleberries","dirty pillows","dirty sanchez","doggie style","doggiestyle","doggy style",
-  "doggystyle","dog style","dolcett","domination","dominatrix","dommes","donkey punch",
-  "double dong","double penetration","dp action","dry hump","dvda","eat my ass","ecchi",
-  "ejaculation","erotic","erotism","escort","eunuch","fag","faggot","fecal","felch","fellatio",
-  "feltch","female squirting","femdom","figging","fingerbang","fingering","fisting",
-  "foot fetish","footjob","frotting","fuck","fuck buttons","fuckin","fucking","fucktards",
-  "fudge packer","fudgepacker","futanari","gangbang","gang bang","gay sex","genitals",
-  "giant cock","girl on","girl on top","girls gone wild","goatcx","goatse","god damn","gokkun",
-  "golden shower","goodpoop","goo girl","goregasm","grope","group sex","g-spot","guro",
-  "hand job","handjob","hard core","hardcore","hentai","homoerotic","honkey","hooker","horny",
-  "hot carl","hot chick","how to kill","how to murder","huge fat","humping","incest",
-  "intercourse","jack off","jail bait","jailbait","jelly donut","jerk off","jigaboo","jiggaboo",
-  "jiggerboo","jizz","juggs","kike","kinbaku","kinkster","kinky","knobbing","leather restraint",
-  "leather straight jacket","lemon party","livesex","lolita","lovemaking","make me come",
-  "male squirting","masturbate","masturbating","masturbation","menage a trois","milf",
-  "missionary position","mong","motherfucker","mound of venus","mr hands","muff diver",
-  "muffdiving","nambla","nawashi","negro","neonazi","nigga","nigger","nig nog","nimphomania",
-  "nipple","nipples","nsfw","nsfw images","nude","nudity","nutten","nympho","nymphomania",
-  "octopussy","omorashi","one cup two girls","one guy one jar","orgasm","orgy","paedophile",
-  "paki","panties","panty","pedobear","pedophile","pegging","penis","phone sex","piece of shit",
-  "pikey","pissing","piss pig","pisspig","playboy","pleasure chest","pole smoker","ponyplay",
-  "poof","poon","poontang","punany","poop chute","poopchute","porn","porno","pornography",
-  "prince albert piercing","pthc","pubes","pussy","queaf","queef","quim","raghead",
-  "raging boner","rape","raping","rapist","rectum","reverse cowgirl","rimjob","rimming",
-  "rosy palm","rosy palm and her 5 sisters","rusty trombone","sadism","santorum","scat",
-  "schlong","scissoring","semen","sex","sexcam","sexo","sexy","sexual","sexually","sexuality",
-  "shaved beaver","shaved pussy","shemale","shibari","shit","shitblimp","shitty","shota",
-  "shrimping","skeet","slanteye","slut","s&m","smut","snatch","snowballing","sodomize","sodomy",
-  "spastic","spic","splooge","splooge moose","spooge","spread legs","spunk","strap on",
-  "strapon","strappado","strip club","style doggy","suck","sucks","suicide girls",
-  "sultry women","swastika","swinger","tainted love","taste my","tea bagging","threesome",
-  "throating","thumbzilla","tied up","tight white","tit","tits","titties","titty","tongue in a",
-  "topless","tosser","towelhead","tranny","tribadism","tub girl","tubgirl","tushy","twat",
-  "twink","twinkie","two girls one cup","undressing","upskirt","urethra play","urophilia",
-  "vagina","venus mound","viagra","vibrator","violet wand","vorarephilia","voyeur","voyeurweb",
-  "voyuer","vulva","wank","wetback","wet dream","white power","whore","worldsex","wrapping men",
-  "wrinkled starfish","xx","xxx","yaoi","yellow showers","yiffy","zoophilia"
-];
-let _lbBlockedSet = null;
-let _lbMaxPhraseWords = 1;
-function lbBlockedSet(){
-  if (!_lbBlockedSet) {
-    _lbBlockedSet = {};
-    LB_BLOCKED.forEach(w => {
-      const n = lbNormalizeForModeration(w);
-      if (!n) return;
-      _lbBlockedSet[n] = true;
-      const words = n.split(" ").length;
-      if (words > _lbMaxPhraseWords) _lbMaxPhraseWords = words;
-    });
-  }
-  return _lbBlockedSet;
-}
-/* de-leet, keep single spaces, letters+space only */
-function lbNormalizeForModeration(str){
-  return String(str || "")
-    .toLowerCase()
-    .replace(/[4@]/g, "a").replace(/3/g, "e").replace(/[1!|]/g, "i")
-    .replace(/0/g, "o").replace(/[5$]/g, "s").replace(/7/g, "t")
-    .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
-}
-/* Checks one field's text against both lists — slurs as a substring,
-   the full LDNOOBW list as whole words AND multi-word phrases (a
-   sliding window over the field's own tokens, since a 2+-word listed
-   phrase — "blow job", "dirty sanchez" — can only ever match a
-   single field on its own, never the name+initial concatenation the
-   old version checked). */
-function lbTextMatchesBlocklist(text){
-  const norm = lbNormalizeForModeration(text);
-  if (!norm) return false;
-  const set = lbBlockedSet(); // also fills in _lbMaxPhraseWords
-  const compact = norm.replace(/ /g, "");
-  for (let i = 0; i < LB_SLUR_ROOTS.length; i++) {
-    if (compact.indexOf(LB_SLUR_ROOTS[i]) !== -1) return true;
-  }
-  const toks = norm.split(" ");
-  for (let n = 1; n <= Math.min(_lbMaxPhraseWords, toks.length); n++) {
-    for (let i = 0; i + n <= toks.length; i++) {
-      if (set[toks.slice(i, i + n).join(" ")]) return true;
-    }
-  }
-  return false;
-}
-function lbNameLooksBad(name, lastInitial){
-  return lbTextMatchesBlocklist(name) || lbTextMatchesBlocklist(lastInitial);
-}
-
-/* ---------- a stable per-browser id (dedupe backstop) ---------- */
-function lbClientId(){
-  let id = "";
-  try { id = localStorage.getItem("roundup:clientId") || ""; } catch (e) {}
-  if (!id) {
-    id = "c-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    try { localStorage.setItem("roundup:clientId", id); } catch (e) {}
-  }
-  return id;
-}
-
-/* ---------- REST helpers ---------- */
+/* ---------- REST helpers ----------
+   Board READS are public — plain anon fetch, unchanged. WRITES go
+   through the supabase-js client from auth.js (window.sbClient) so
+   they carry the signed-in user's JWT; RLS then checks
+   auth.uid() = user_id, and a trigger stamps the display
+   name / last initial / grad year from that user's profile. */
 function lbHeaders(extra){
   const h = {
     "apikey": SUPABASE_ANON_KEY,
@@ -205,27 +89,25 @@ function lbHeaders(extra){
   return h;
 }
 function lbInsert(rows){
-  if (!leaderboardEnabled() || !rows || !rows.length) return Promise.resolve(false);
-  return fetch(SB_BASE + "/rest/v1/scores", {
-    method: "POST",
-    headers: lbHeaders({ "Prefer": "return=minimal" }),
-    body: JSON.stringify(rows)
-  }).then(r => r.ok).catch(() => false);
+  if (!leaderboardEnabled() || !window.sbClient || !rows || !rows.length) return Promise.resolve(false);
+  return window.sbClient.from("scores").insert(rows)
+    .then(({ error }) => !error)
+    .catch(() => false);
 }
 
-/* Which metrics this browser has ALREADY posted for a game this week
-   — a server-side backstop against re-posting (the localStorage
-   "solved"/"posted" flags are the first line; this catches a
-   cleared-storage replay from the same browser). Resolves to an
-   object like { time: true }. */
-function lbClientMetricsThisWeek(gameId){
-  if (!leaderboardEnabled()) return Promise.resolve({});
+/* Which metrics this ACCOUNT has already posted for a game this week
+   — a server-side backstop against re-posting on top of the
+   localStorage "solved" / "posted" flags. Resolves to an object like
+   { time: true }. */
+function lbMetricsPostedThisWeek(gameId){
+  const user = (typeof currentUser === "function") ? currentUser() : null;
+  if (!leaderboardEnabled() || !user) return Promise.resolve({});
   const qs = [
     "select=metric",
     "game_id=eq." + encodeURIComponent(gameId),
     "board=eq.weekly",
     "week_key=eq." + encodeURIComponent(isoWeekKey()),
-    "client_id=eq." + encodeURIComponent(lbClientId()),
+    "user_id=eq." + encodeURIComponent(user.id),
     "limit=50"
   ].join("&");
   return fetch(SB_BASE + "/rest/v1/scores?" + qs, { headers: lbHeaders() })
@@ -238,7 +120,10 @@ function lbClientMetricsThisWeek(gameId){
     .catch(() => ({}));
 }
 
+/* One row per PERSON = one row per account. Falls back to the name
+   triple only for any legacy row with no user_id. */
 function lbPersonKey(row){
+  if (row.user_id) return "u:" + row.user_id;
   return (row.name || "").toLowerCase() + "|" + (row.last_initial || "").toLowerCase() + "|" + (row.grade || "");
 }
 /* GET one board's rows, resolved to ONE row per person:
@@ -251,7 +136,7 @@ function lbFetchBoard(gameId, board, key){
   const wk = board === "alltime" ? "all" : isoWeekKey();
   const isSum = bcfg.agg === "sum";
   const qs = [
-    "select=name,last_initial,grade,value",
+    "select=user_id,name,last_initial,grade,value",
     "game_id=eq." + encodeURIComponent(gameId),
     "board=eq." + (board === "alltime" ? "alltime" : "weekly"),
     "week_key=eq." + encodeURIComponent(wk),
@@ -267,7 +152,7 @@ function lbFetchBoard(gameId, board, key){
       const acc = {};
       rows.forEach(row => {
         const k = lbPersonKey(row);
-        if (!acc[k]) acc[k] = { name: row.name, last_initial: row.last_initial, grade: row.grade, value: 0 };
+        if (!acc[k]) acc[k] = { user_id: row.user_id, name: row.name, last_initial: row.last_initial, grade: row.grade, value: 0 };
         acc[k].value += Number(row.value) || 0;
       });
       const arr = Object.keys(acc).map(k => acc[k]);
@@ -335,58 +220,33 @@ function lbRenderTop10Panel(mountEl, gameId){
           ${g.boards.length > 1 ? `<div class="lb-subboard__label">${escapeHtml(b.label)}</div>` : ""}
           <div data-board-slot="${i}"></div>
         </div>`).join("")}
-      <a class="sidecard__link" href="stats.html">Full leaderboard &amp; all-time &rarr;</a>
+      <a class="sidecard__link" href="leaderboard.html">Full leaderboard &amp; all-time &rarr;</a>
     </div>`;
   g.boards.forEach((b, i) => {
     lbRenderBoard(mountEl.querySelector(`[data-board-slot="${i}"]`), gameId, "weekly", b.key);
   });
 }
 
-/* ---------- identity form (stats page) ---------- */
-function lbRenderIdentityGate(mountEl, onSaved){
+/* ---------- account gate (leaderboard page + submit prompts) ----------
+   Posting to the leaderboard now needs a signed-in account. This just
+   reports the state; the actual sign-up / log-in lives on profile.html. */
+function lbAccountLine(){
+  const user = (typeof currentUser === "function") ? currentUser() : null;
+  const id = (typeof authIdentity === "function") ? authIdentity() : null;
+  if (user && id && id.name) {
+    return `Posting as <strong>${escapeHtml(formatIdentity(id))}</strong>${id.grade ? " &middot; &rsquo;" + escapeHtml(id.grade) : ""}.`;
+  }
+  if (user) {
+    return `You&rsquo;re signed in. <a href="profile.html">Finish your profile</a> to post to the leaderboard.`;
+  }
+  return `<a href="profile.html">Log in or make an account</a> to post your scores. Anyone can view the boards.`;
+}
+function lbRenderAccountGate(mountEl){
   if (!mountEl) return;
-  const id = loadIdentity();
-  mountEl.innerHTML = `
-    <form class="lb-identity" autocomplete="off">
-      <p class="lb-identity__lead">${id.name
-        ? `Posting as <strong>${escapeHtml(formatIdentity(id))}</strong>${id.grade ? " · &rsquo;" + escapeHtml(id.grade) : ""}.`
-        : "Pick a name to post to the leaderboard — first name and last initial only."}</p>
-      <div class="lb-identity__fields">
-        <label>First name
-          <input type="text" name="name" maxlength="20" value="${escapeHtml(id.name)}" required>
-        </label>
-        <label>Last initial
-          <input type="text" name="lastInitial" maxlength="1" value="${escapeHtml(id.lastInitial)}">
-        </label>
-        <label>Grad year
-          <select name="grade">
-            <option value=""${id.grade ? "" : " selected"}>—</option>
-            ${["27", "28", "29", "30", "31", "32", "33"].map(g => `<option value="${g}"${id.grade === g ? " selected" : ""}>&rsquo;${g}</option>`).join("")}
-          </select>
-        </label>
-      </div>
-      <button class="btn" type="submit">${id.name ? "Update name" : "Save name"}</button>
-      <p class="sidecard__hint" data-role="nameerr" hidden></p>
-    </form>`;
-
-  mountEl.querySelector("form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const els = e.target.elements;
-    const name = els.namedItem("name").value;
-    const lastInitial = els.namedItem("lastInitial").value;
-    const grade = els.namedItem("grade").value;
-    const err = mountEl.querySelector('[data-role="nameerr"]');
-    if (lbNameLooksBad(name, lastInitial)) {
-      if (err) { err.textContent = "That name can’t be used on the leaderboard — please pick another."; err.hidden = false; }
-      return;
-    }
-    saveIdentity({ name: name, lastInitial: lastInitial, grade: grade });
-    lbRenderIdentityGate(mountEl, onSaved);
-    if (typeof onSaved === "function") onSaved();
-  });
+  mountEl.innerHTML = `<p class="lb-identity__lead">${lbAccountLine()}</p>`;
 }
 
-/* ---------- stats.html leaderboard section ---------- */
+/* ---------- leaderboard.html section ---------- */
 function lbInitStatsPage(){
   const mount = document.getElementById("leaderboardSection");
   if (!mount) return;
@@ -421,6 +281,7 @@ function lbInitStatsPage(){
   const metricSel = document.getElementById("lbMetricSelect");
   const whenSel = document.getElementById("lbWhenSelect");
   const boardMount = document.getElementById("lbBoardMount");
+  const gate = document.getElementById("lbIdentityGate");
 
   function fillMetrics(){
     const g = lbGameConfig(gameSel.value);
@@ -428,7 +289,8 @@ function lbInitStatsPage(){
   }
   function redraw(){ lbRenderBoard(boardMount, gameSel.value, whenSel.value, metricSel.value); }
 
-  lbRenderIdentityGate(document.getElementById("lbIdentityGate"), redraw);
+  lbRenderAccountGate(gate);
+  document.addEventListener("roundup:authchange", () => { lbRenderAccountGate(gate); redraw(); });
   gameSel.addEventListener("change", () => { fillMetrics(); redraw(); });
   metricSel.addEventListener("change", redraw);
   whenSel.addEventListener("change", redraw);
@@ -436,18 +298,18 @@ function lbInitStatsPage(){
   redraw();
 }
 
-/* ---------- submitting ---------- */
-function lbIdentityRowBase(gameId, id){
-  return {
-    game_id: gameId,
-    name: (id.name || "").slice(0, 20),
-    last_initial: (id.lastInitial || "").slice(0, 1),
-    grade: (id.grade || "").slice(0, 2),
-    client_id: lbClientId()
-  };
+/* ---------- submitting ----------
+   Rows only carry game_id + user_id + the metric/value/bucket. The
+   `scores` insert trigger fills name / last_initial / grade from the
+   signed-in user's profile, so a client can't post under another
+   name. */
+function lbRowBase(gameId){
+  const user = (typeof currentUser === "function") ? currentUser() : null;
+  return user ? { game_id: gameId, user_id: user.id } : null;
 }
-function lbRowsForMetric(gameId, id, metric, value){
-  const base = lbIdentityRowBase(gameId, id);
+function lbRowsForMetric(gameId, metric, value){
+  const base = lbRowBase(gameId);
+  if (!base) return [];
   return [
     Object.assign({}, base, { metric: metric, value: value, board: "weekly", week_key: isoWeekKey() }),
     Object.assign({}, base, { metric: metric, value: value, board: "alltime", week_key: "all" })
@@ -464,21 +326,20 @@ function lbValueFromResult(gameId, result){
   if (b.metric === "time" && result.won && typeof result.timeSeconds === "number") return { metric: "time", value: Math.round(result.timeSeconds * 100) / 100 };
   return null;
 }
-function lbSubmitRun(gameId, result, identity){
+function lbSubmitRun(gameId, result){
   const val = lbValueFromResult(gameId, result);
-  const id = identity || loadIdentity();
-  if (!leaderboardEnabled() || !val || !id.name) return Promise.resolve(false);
-  if (lbNameLooksBad(id.name, id.lastInitial)) return Promise.resolve(false);
+  const user = (typeof currentUser === "function") ? currentUser() : null;
+  if (!leaderboardEnabled() || !val || !user) return Promise.resolve(false);
   // Bronco Blitz posts EVERY round — that's what feeds the "Total"
   // board (and the High score board just takes the max anyway).
   // Dash / Splash keep one row per week (a fastest-time board only
   // wants your best).
   if (gameId === "broncoBlitz") {
-    return lbInsert(lbRowsForMetric(gameId, id, val.metric, val.value));
+    return lbInsert(lbRowsForMetric(gameId, val.metric, val.value));
   }
-  return lbClientMetricsThisWeek(gameId).then(have => {
-    if (have[val.metric]) return true; // already posted this week from this browser
-    return lbInsert(lbRowsForMetric(gameId, id, val.metric, val.value));
+  return lbMetricsPostedThisWeek(gameId).then(have => {
+    if (have[val.metric]) return true; // already posted this week from this account
+    return lbInsert(lbRowsForMetric(gameId, val.metric, val.value));
   });
 }
 
@@ -514,23 +375,29 @@ function lbPostPuzzleSolve(gameId){
   try { posted = localStorage.getItem(lbPostedFlagKey(gameId, winId)) === "1"; } catch (e) {}
   if (posted) return Promise.resolve(true);
 
-  const id = loadIdentity();
-  if (!id.name) {
-    if (host) host.innerHTML = `<p class="lb-submit">Your solve${rec.t ? ` (${escapeHtml(formatTime(rec.t))})` : ""} is saved. <a href="stats.html">Set a name</a> to put it on the leaderboard.</p>`;
+  const user = (typeof currentUser === "function") ? currentUser() : null;
+  if (!user) {
+    if (host) host.innerHTML = `<p class="lb-submit">Your solve${rec.t ? ` (${escapeHtml(formatTime(rec.t))})` : ""} is saved on this device. <a href="profile.html">Log in or make an account</a> to put it on the leaderboard.</p>`;
     return Promise.resolve(false);
   }
-  if (lbNameLooksBad(id.name, id.lastInitial)) {
-    if (host) host.innerHTML = `<p class="lb-submit">Your name can’t be posted to the leaderboard — change it on <a href="stats.html">Leaderboard &amp; Stats</a>.</p>`;
-    return Promise.resolve(false);
+  // A reveal-assisted solve was frozen with no time (see the guard in
+  // config.js). It still counts as a win + streak; it just can't go on
+  // the fastest-solve board.
+  if (rec.assisted && rec.t == null) {
+    const g2 = lbGameConfig(gameId);
+    const hasStreak = g2 && g2.boards.some(b => b.metric === "streak");
+    if (host && !hasStreak) {
+      host.innerHTML = `<p class="lb-submit">Solve recorded for your stats. Reveal-assisted solves don&rsquo;t go on the fastest-solve leaderboard.</p>`;
+    }
   }
 
-  return lbClientMetricsThisWeek(gameId).then(have => {
+  return lbMetricsPostedThisWeek(gameId).then(have => {
     const rows = [];
-    if (rec.t != null && !have.time) rows.push.apply(rows, lbRowsForMetric(gameId, id, "time", rec.t));
+    if (rec.t != null && !have.time) rows.push.apply(rows, lbRowsForMetric(gameId, "time", rec.t));
     const hasStreakBoard = g.boards.some(b => b.metric === "streak");
     if (hasStreakBoard && !have.streak && typeof computeStreak === "function") {
       const st = computeStreak(gameId);
-      if (typeof st === "number" && st > 0) rows.push.apply(rows, lbRowsForMetric(gameId, id, "streak", st));
+      if (typeof st === "number" && st > 0) rows.push.apply(rows, lbRowsForMetric(gameId, "streak", st));
     }
     if (!rows.length) {
       try { localStorage.setItem(lbPostedFlagKey(gameId, winId), "1"); } catch (e) {}
@@ -565,11 +432,12 @@ function lbAttachGamePage(gameId){
     if (!val) return;
     const host = document.getElementById("leaderboardSubmitMount");
     if (!host) return;
-    const id = loadIdentity();
+    const user = (typeof currentUser === "function") ? currentUser() : null;
+    const id = (typeof authIdentity === "function") ? authIdentity() : null;
     const shown = val.metric === "time" ? formatTime(val.value) : Number(val.value).toLocaleString();
 
-    if (!id.name) {
-      host.innerHTML = `<p class="lb-submit">Set a name on <a href="stats.html">Leaderboard &amp; Stats</a> to post this (${escapeHtml(shown)}).</p>`;
+    if (!user || !id || !id.name) {
+      host.innerHTML = `<p class="lb-submit"><a href="profile.html">Log in or make an account</a> to post this (${escapeHtml(shown)}) to the leaderboard.</p>`;
       return;
     }
     host.innerHTML = `
@@ -602,8 +470,10 @@ function lbAttachPuzzlePage(gameId){
     else panel.innerHTML = "";
   }
 
-  // solved earlier this week, just now got a name / just came back?
+  // solved earlier this week, just now came back? (may run before auth
+  // has loaded — the authchange handler below re-checks once it has)
   lbPostPuzzleSolve(gameId);
+  document.addEventListener("roundup:authchange", () => { lbPostPuzzleSolve(gameId); });
 
   // first completion of the current puzzle, live
   document.addEventListener("roundup:puzzlesolved", (e) => {

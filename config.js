@@ -4,9 +4,9 @@
    This file is shared by every page (index.html, games.html,
    weekly-crossword.html, weekly-word-search.html,
    special-edition.html, bronco-dash.html, bronco-splash.html,
-   bronco-blitz.html, archive.html, stats.html, about.html,
-   report-bug.html) — so you only ever edit game content in ONE
-   place.
+   bronco-blitz.html, archive.html, leaderboard.html, profile.html,
+   about.html, report-bug.html) — so you only ever edit game content
+   in ONE place.
 
    RETIRED GAMES
    -----------------------------------------------------------------
@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.0.6";
+const SITE_VERSION = "2.1.0";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -128,6 +128,27 @@ const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
 const SUPABASE_URL = "https://wscjrgimchvfvmzaimhd.supabase.co/";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzY2pyZ2ltY2h2ZnZtemFpbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NzEwMTYsImV4cCI6MjEwNDA0NzAxNn0.CAQyR62LxFD4vSrjGDPxkShYEEcGQM1WfVF2ZC-qFtU";
 function leaderboardEnabled(){ return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
+
+/* ACCOUNTS (Supabase Auth) — see the README's "Accounts (Supabase
+   Auth)" section for the tables / RLS / trigger SQL and the Cloudflare
+   Turnstile setup.
+   -----------------------------------------------------------------
+   Accounts let a player save their stats and reload them on another
+   device, and are what gate posting to the leaderboard. Playing never
+   needs an account. auth.js (loaded right after this file) builds the
+   Supabase client from SUPABASE_URL / SUPABASE_ANON_KEY above — if
+   those are blank, accounts and the leaderboard are both off.
+
+   TURNSTILE_SITEKEY is the PUBLIC Cloudflare Turnstile site key (safe
+   to ship in client code) for the bot check on the sign-up / log-in
+   forms. It must be paired with the matching SECRET key pasted into
+   Supabase → Authentication → Attack Protection → CAPTCHA. Blank this
+   AND turn that Supabase setting off to disable the check. For local
+   development use Cloudflare's always-passes test key
+   "1x00000000000000000000AA" (and keep the Supabase setting off, or
+   it will still demand a real token). */
+const TURNSTILE_SITEKEY = "0x4AAAAAAEq3OqNkeAXGB0mw";
+function turnstileEnabled(){ return !!TURNSTILE_SITEKEY; }
 
 /* ISO-week bucket like "2026-W36" — what the weekly boards group on.
    Monday-based, matches the site's "new games every school week"
@@ -726,10 +747,16 @@ function renderHomeCards(){
       cta: "Browse games →"
     },
     {
-      title: "Leaderboard & Stats",
-      blurb: "This week's top players on the shared leaderboard, plus your own win counts and streaks tracked in your browser.",
-      href: "stats.html",
-      cta: "Open Leaderboard & Stats →"
+      title: "Leaderboard",
+      blurb: "This week's top players on the shared leaderboard — fastest solves, high scores, and longest streaks, this week and all-time.",
+      href: "leaderboard.html",
+      cta: "Open the leaderboard →"
+    },
+    {
+      title: "Profile",
+      blurb: "Make an account to save your stats and post your scores — then see your win counts, streaks, and bests here, synced across devices.",
+      href: "profile.html",
+      cta: "Open your profile →"
     },
     {
       title: "Archive",
@@ -908,8 +935,40 @@ const AMUSELABS_ORIGIN = "https://puzzleme.amuselabs.com";
    puzzle), there's no fresh clock, so no time is recorded — but the
    freeze/solve still stands. */
 const PUZZLE_SOLVE_KEY_PREFIX = "roundup:solved:";
-const puzzleClocks = {};    // "category::winId" -> { startedAt } — set on first PUZZLE_PROGRESS (preferred)
-const puzzleFirstSeen = {}; // "category::winId" -> ts of the first message of any kind — fallback start
+const puzzleClocks = {};        // "category::winId" -> { startedAt } — set on first PUZZLE_PROGRESS (preferred)
+const puzzleFirstSeen = {};     // "category::winId" -> ts of the first message of any kind — fallback start
+const puzzleInteractions = {};  // "category::winId" -> count of genuine solving-interaction messages this page view
+
+/* ---------- reveal / assist guard (leaderboard TIME only) ----------
+   AmuseLabs' free tier exposes NO "used a reveal/check" flag to the
+   parent page (confirmed against their iframe-communication docs), so
+   a solve that came from revealing the grid can't be told apart from
+   a real one by any single field. Instead we gate the leaderboard
+   TIME on plausibility: a genuine solve takes more than a few seconds
+   AND produces a stream of interaction messages (AmuseLabs sends a
+   `type:"event"` message on every click/tap in the grid; Word Flower
+   sends PUZZLE_PROGRESS per word found). A reveal-grid-then-autocomplete
+   fires the completion with almost no interaction and near-zero time.
+
+   When a solve trips this guard it STILL counts as a win and still
+   feeds the local streak — it just carries no time, so lbPostPuzzleSolve
+   never puts it on the fastest-solve board (that only posts when
+   rec.t != null).
+
+   Tuning notes: the SECONDS floor is the real workhorse — it stops the
+   "open puzzle, reveal the whole grid, post a 3-second time" case
+   outright, and nobody legitimately solves one of these full-size
+   puzzles in under ~25s. The interaction count is only a tiebreaker
+   for the in-between zone (fast-ish, but with literally zero grid
+   clicks — a hallmark of a reveal), and deliberately weak: AmuseLabs'
+   docs don't pin down how often the `type:"event"` click message
+   fires, so a real solve that happens to be quiet on it is NOT
+   punished as long as it took a plausible amount of time. Raise
+   MIN_UNASSISTED_SECONDS if reveals still slip through. A few revealed
+   letters inside an otherwise-real, minutes-long solve still won't
+   trip this — perfect detection needs AmuseLabs' paid Contest Mode. */
+const MIN_UNASSISTED_SECONDS = 25;
+const ASSIST_GRACE_SECONDS = 120;
 
 function puzzleSolveRecord(category, winId){
   if (!category || !winId) return null;
@@ -917,22 +976,27 @@ function puzzleSolveRecord(category, winId){
 }
 /* Writes the first-completion record once. Never overwrites an
    existing one (that's the whole anti-cheese point). Returns the
-   record that now stands. */
-function freezePuzzleSolve(category, winId, timeSeconds){
+   record that now stands. `assisted` true → the solve looked
+   reveal-assisted (see the guard above): stored with t:null so it
+   never reaches the leaderboard time board. */
+function freezePuzzleSolve(category, winId, timeSeconds, assisted){
   const key = PUZZLE_SOLVE_KEY_PREFIX + category + ":" + winId;
   const existing = loadGameState(key);
   if (existing) return existing;
-  const t = (typeof timeSeconds === "number" && isFinite(timeSeconds) && timeSeconds > 0)
+  const t = (!assisted && typeof timeSeconds === "number" && isFinite(timeSeconds) && timeSeconds > 0)
     ? Math.round(timeSeconds * 100) / 100
     : null;
   const rec = { at: Date.now(), t: t };
+  if (assisted) rec.assisted = true;
   saveGameState(key, rec);
   return rec;
 }
 /* Best-effort: some AmuseLabs payloads carry an elapsed time. Prefer
-   that over our own wall-clock when it's present and sane. */
+   that over our own wall-clock when it's present and sane. `timeTaken`
+   is the documented PUZZLE_COMPLETE field (seconds); the rest are
+   defensive guesses against other/older payload shapes. */
 function amuselabsPayloadSeconds(data){
-  const candidates = [data.elapsedTime, data.secondsElapsed, data.solveTime, data.timeElapsed, data.time, data.timer];
+  const candidates = [data.timeTaken, data.elapsedTime, data.secondsElapsed, data.solveTime, data.timeElapsed, data.time, data.timer];
   for (let i = 0; i < candidates.length; i++) {
     let v = candidates[i];
     if (typeof v !== "number" || !isFinite(v) || v <= 0) continue;
@@ -941,10 +1005,10 @@ function amuselabsPayloadSeconds(data){
   }
   return null;
 }
-function emitPuzzleSolved(category, winId, timeSeconds, streakEligible, firstTime){
+function emitPuzzleSolved(category, winId, timeSeconds, streakEligible, firstTime, assisted){
   try {
     document.dispatchEvent(new CustomEvent("roundup:puzzlesolved", {
-      detail: { category: category, winId: winId, timeSeconds: timeSeconds, streakEligible: streakEligible, firstTime: firstTime }
+      detail: { category: category, winId: winId, timeSeconds: timeSeconds, streakEligible: streakEligible, firstTime: firstTime, assisted: !!assisted }
     }));
   } catch (e) { /* no-op */ }
 }
@@ -1004,6 +1068,12 @@ function initPuzzleCompletionListener(){
       puzzleClocks[clockKey] = { startedAt: Date.now() };
     }
 
+    // count genuine solving interactions (see the reveal/assist guard
+    // above): a grid click/tap, or a Word Flower word found
+    if (!alreadySolved && (data.type === "event" || data.type === "PUZZLE_PROGRESS")) {
+      puzzleInteractions[clockKey] = (puzzleInteractions[clockKey] || 0) + 1;
+    }
+
     const isCrosswordStyleComplete = data.type === "PUZZLE_COMPLETE" && data.completedCorrectly;
     const isWordFlowerComplete = data.type === "PUZZLE_PROGRESS"
       && typeof data.wordsFound === "number" && typeof data.totalWords === "number"
@@ -1019,8 +1089,19 @@ function initPuzzleCompletionListener(){
     let wallT = null;
     if (clk) wallT = (Date.now() - clk.startedAt) / 1000;
     else if (puzzleFirstSeen[clockKey]) wallT = (Date.now() - puzzleFirstSeen[clockKey]) / 1000;
-    const rec = freezePuzzleSolve(category, winId, payloadT != null ? payloadT : wallT);
-    emitPuzzleSolved(category, winId, rec.t, streakEligible, true);
+    const solveSeconds = payloadT != null ? payloadT : wallT;
+
+    // reveal/assist guard — see the comment on MIN_UNASSISTED_SECONDS.
+    // Flag when: no usable time at all, OR faster than any real solve,
+    // OR fast-ish with zero grid interaction (a reveal fingerprint).
+    const interactions = puzzleInteractions[clockKey] || 0;
+    const looksAssisted =
+      solveSeconds == null ||
+      solveSeconds < MIN_UNASSISTED_SECONDS ||
+      (interactions === 0 && solveSeconds < ASSIST_GRACE_SECONDS);
+
+    const rec = freezePuzzleSolve(category, winId, solveSeconds, looksAssisted);
+    emitPuzzleSolved(category, winId, rec.t, streakEligible, true, !!rec.assisted);
   });
 }
 initPuzzleCompletionListener();
@@ -1150,6 +1231,126 @@ function saveGameState(key, state){
 }
 function escapeHtml(str){
   return str.replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+/* ---------- name moderation (client side) ----------
+   Lives here (not in leaderboard.js) so profile.html can screen a
+   sign-up's first name before it's sent — leaderboard.js and auth.js
+   both reuse these. The AUTHORITATIVE check is the name-check TRIGGER
+   on Supabase (on `profiles` now, see the README "Accounts" section);
+   keep this list and the `blocked_words` table (blocked-words.csv /
+   blocked-words.sql) in sync with each other.
+
+   Two passes, both over a de-leeted (b4d -> bad) version:
+     • LB_SLUR_ROOTS  — substring match. Slurs / hardcore profanity
+       where "xXfaggotXx"-style evasion is the real risk and a
+       collision with a real student name is ~nil.
+     • LB_BLOCKED     — the full LDNOOBW English list, matched only as
+       a WHOLE token or the whole string, so it can't nuke "Cassandra"
+       for containing "ass".
+   LDNOOBW: github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words */
+const LB_SLUR_ROOTS = [
+  "nigg","fagg","kike","spic","chink","cunt","fuck","shit","retard",
+  "tranny","wetback","coon","dyke","jigab","beaner","goatse"
+];
+const LB_BLOCKED = [
+  "2g1c","2 girls 1 cup","acrotomophilia","alabama hot pocket","alaskan pipeline","anal",
+  "anilingus","anus","apeshit","arsehole","ass","asshole","assmunch","auto erotic","autoerotic",
+  "babeland","baby batter","baby juice","ball gag","ball gravy","ball kicking","ball licking",
+  "ball sack","ball sucking","bangbros","bangbus","bareback","barely legal","barenaked",
+  "bastard","bastardo","bastinado","bbw","bdsm","beaner","beaners","beaver cleaver",
+  "beaver lips","beastiality","bestiality","big black","big breasts","big knockers","big tits",
+  "bimbos","birdlock","bitch","bitches","black cock","blonde action","blonde on blonde action",
+  "blowjob","blow job","blow your load","blue waffle","blumpkin","bollocks","bondage","boner",
+  "boob","boobs","booty call","brown showers","brunette action","bukkake","bulldyke",
+  "bullet vibe","bullshit","bung hole","bunghole","busty","butt","buttcheeks","butthole",
+  "camel toe","camgirl","camslut","camwhore","carpet muncher","carpetmuncher",
+  "chocolate rosebuds","cialis","circlejerk","cleveland steamer","clit","clitoris",
+  "clover clamps","clusterfuck","cock","cocks","coprolagnia","coprophilia","cornhole","coon",
+  "coons","creampie","cum","cumming","cumshot","cumshots","cunnilingus","cunt","darkie",
+  "date rape","daterape","deep throat","deepthroat","dendrophilia","dick","dildo","dingleberry",
+  "dingleberries","dirty pillows","dirty sanchez","doggie style","doggiestyle","doggy style",
+  "doggystyle","dog style","dolcett","domination","dominatrix","dommes","donkey punch",
+  "double dong","double penetration","dp action","dry hump","dvda","eat my ass","ecchi",
+  "ejaculation","erotic","erotism","escort","eunuch","fag","faggot","fecal","felch","fellatio",
+  "feltch","female squirting","femdom","figging","fingerbang","fingering","fisting",
+  "foot fetish","footjob","frotting","fuck","fuck buttons","fuckin","fucking","fucktards",
+  "fudge packer","fudgepacker","futanari","gangbang","gang bang","gay sex","genitals",
+  "giant cock","girl on","girl on top","girls gone wild","goatcx","goatse","god damn","gokkun",
+  "golden shower","goodpoop","goo girl","goregasm","grope","group sex","g-spot","guro",
+  "hand job","handjob","hard core","hardcore","hentai","homoerotic","honkey","hooker","horny",
+  "hot carl","hot chick","how to kill","how to murder","huge fat","humping","incest",
+  "intercourse","jack off","jail bait","jailbait","jelly donut","jerk off","jigaboo","jiggaboo",
+  "jiggerboo","jizz","juggs","kike","kinbaku","kinkster","kinky","knobbing","leather restraint",
+  "leather straight jacket","lemon party","livesex","lolita","lovemaking","make me come",
+  "male squirting","masturbate","masturbating","masturbation","menage a trois","milf",
+  "missionary position","mong","motherfucker","mound of venus","mr hands","muff diver",
+  "muffdiving","nambla","nawashi","negro","neonazi","nigga","nigger","nig nog","nimphomania",
+  "nipple","nipples","nsfw","nsfw images","nude","nudity","nutten","nympho","nymphomania",
+  "octopussy","omorashi","one cup two girls","one guy one jar","orgasm","orgy","paedophile",
+  "paki","panties","panty","pedobear","pedophile","pegging","penis","phone sex","piece of shit",
+  "pikey","pissing","piss pig","pisspig","playboy","pleasure chest","pole smoker","ponyplay",
+  "poof","poon","poontang","punany","poop chute","poopchute","porn","porno","pornography",
+  "prince albert piercing","pthc","pubes","pussy","queaf","queef","quim","raghead",
+  "raging boner","rape","raping","rapist","rectum","reverse cowgirl","rimjob","rimming",
+  "rosy palm","rosy palm and her 5 sisters","rusty trombone","sadism","santorum","scat",
+  "schlong","scissoring","semen","sex","sexcam","sexo","sexy","sexual","sexually","sexuality",
+  "shaved beaver","shaved pussy","shemale","shibari","shit","shitblimp","shitty","shota",
+  "shrimping","skeet","slanteye","slut","s&m","smut","snatch","snowballing","sodomize","sodomy",
+  "spastic","spic","splooge","splooge moose","spooge","spread legs","spunk","strap on",
+  "strapon","strappado","strip club","style doggy","suck","sucks","suicide girls",
+  "sultry women","swastika","swinger","tainted love","taste my","tea bagging","threesome",
+  "throating","thumbzilla","tied up","tight white","tit","tits","titties","titty","tongue in a",
+  "topless","tosser","towelhead","tranny","tribadism","tub girl","tubgirl","tushy","twat",
+  "twink","twinkie","two girls one cup","undressing","upskirt","urethra play","urophilia",
+  "vagina","venus mound","viagra","vibrator","violet wand","vorarephilia","voyeur","voyeurweb",
+  "voyuer","vulva","wank","wetback","wet dream","white power","whore","worldsex","wrapping men",
+  "wrinkled starfish","xx","xxx","yaoi","yellow showers","yiffy","zoophilia"
+];
+let _lbBlockedSet = null;
+let _lbMaxPhraseWords = 1;
+function lbBlockedSet(){
+  if (!_lbBlockedSet) {
+    _lbBlockedSet = {};
+    LB_BLOCKED.forEach(w => {
+      const n = lbNormalizeForModeration(w);
+      if (!n) return;
+      _lbBlockedSet[n] = true;
+      const words = n.split(" ").length;
+      if (words > _lbMaxPhraseWords) _lbMaxPhraseWords = words;
+    });
+  }
+  return _lbBlockedSet;
+}
+/* de-leet, keep single spaces, letters+space only */
+function lbNormalizeForModeration(str){
+  return String(str || "")
+    .toLowerCase()
+    .replace(/[4@]/g, "a").replace(/3/g, "e").replace(/[1!|]/g, "i")
+    .replace(/0/g, "o").replace(/[5$]/g, "s").replace(/7/g, "t")
+    .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+}
+/* Checks one field's text against both lists — slurs as a substring,
+   the full LDNOOBW list as whole words AND multi-word phrases (a
+   sliding window over the field's own tokens). */
+function lbTextMatchesBlocklist(text){
+  const norm = lbNormalizeForModeration(text);
+  if (!norm) return false;
+  const set = lbBlockedSet(); // also fills in _lbMaxPhraseWords
+  const compact = norm.replace(/ /g, "");
+  for (let i = 0; i < LB_SLUR_ROOTS.length; i++) {
+    if (compact.indexOf(LB_SLUR_ROOTS[i]) !== -1) return true;
+  }
+  const toks = norm.split(" ");
+  for (let n = 1; n <= Math.min(_lbMaxPhraseWords, toks.length); n++) {
+    for (let i = 0; i + n <= toks.length; i++) {
+      if (set[toks.slice(i, i + n).join(" ")]) return true;
+    }
+  }
+  return false;
+}
+function lbNameLooksBad(name, lastInitial){
+  return lbTextMatchesBlocklist(name) || lbTextMatchesBlocklist(lastInitial);
 }
 
 /* ---------- win stats (stats.html) ----------
@@ -1859,7 +2060,7 @@ function statRowsFor(gameId){
   return rows;
 }
 
-/* ---------- stats page (stats.html only) ----------
+/* ---------- stats grid (profile.html) ----------
    One card per non-retired game (STAT_GAMES entry without `retired`),
    each listing only the stats that apply to it (see statRowsFor) —
    a crossword-type game shows Wins/Streak, a persistent race/swim
@@ -2111,7 +2312,7 @@ function renderGameStatsCard(mountId, gameId){
             </li>
           `).join("")}
         </ul>
-        <a class="sidecard__link" href="stats.html">All your stats &rarr;</a>
+        <a class="sidecard__link" href="profile.html">All your stats &rarr;</a>
       </article>
     `;
 

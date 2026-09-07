@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile — The Roundup Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <a href="index.html" class="masthead__logo">
+    <img src="logo.png" alt="The Roundup — Brophy College Preparatory">
+  </a>
+  <p class="masthead__tag">Games &amp; Puzzles</p>
+  <p class="masthead__editor">Puzzles by Carter Kasarjian &bull; New Games Every School Week</p>
+</header>
+
+<nav class="dateline">
+  <div class="dateline__inner">
+    <span class="dateline__edition" id="editionLabel">No. — · —</span>
+    <div class="dateline__nav">
+      <a href="index.html">Home</a>
+      <div class="dateline__dropdown">
+        <a href="games.html" class="dateline__dropdown-trigger">Games <span class="dateline__dropdown-caret">▾</span></a>
+        <div class="dateline__dropdown-menu">
+          <a href="weekly-crossword.html">Weekly Crossword</a>
+          <a href="weekly-word-search.html">Weekly Word Search</a>
+          <a href="special-edition.html">Special Edition</a>
+          <a href="print-edition.html">Print Edition</a>
+          <a href="bronco-blitz.html">Bronco Blitz</a>
+          <a href="bronco-dash.html">Bronco Dash</a>
+          <a href="bronco-splash.html">Bronco Splash</a>
+        </div>
+      </div>
+      <a href="archive.html">Archive</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="profile.html" aria-current="page">Profile</a>
+      <a href="about.html">About</a>
+      <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Roundup Home ↗</a>
+      <a href="https://www.brophyprep.org/" target="_blank" rel="noopener">Brophy Home ↗</a>
+    </div>
+  </div>
+</nav>
+
+<main class="shell">
+  <div class="hero">
+    <p class="hero__eyebrow">Profile</p>
+    <h1>Your Profile</h1>
+    <p>Make an account to save your stats and post scores to the leaderboard — then they follow you to any device you sign in on. You never need an account just to play.</p>
+    <a class="hero__back" href="index.html">← Back to all games</a>
+  </div>
+
+  <div id="profileMount">
+    <div class="lb-panel"><p class="lb-empty">Loading…</p></div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer__inner">
+    <p>&copy; <span id="year"></span> Brophy College Preparatory&rsquo;s The Roundup &bull; Version <span id="siteVersion"></span></p>
+    <a href="report-bug.html">Bug Report / Contact</a>
+    <a href="https://roundup.brophyprep.org/" target="_blank" rel="noopener">Read the Roundup ↗</a>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.min.js"></script>
+<script src="auth.js"></script>
+<script src="embed.js"></script>
+<script>
+  // Turnstile (bot check). Only pulled in when a site key is set.
+  window.roundupTurnstileReady = false;
+  window.onRoundupTurnstile = function () { window.roundupTurnstileReady = true; renderProfile(); };
+  if (typeof turnstileEnabled === "function" && turnstileEnabled()) {
+    var s = document.createElement("script");
+    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onRoundupTurnstile";
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  }
+</script>
+<script>
+(function () {
+  "use strict";
+  var GRAD_YEARS = ["27", "28", "29", "30", "31", "32", "33"];
+  var mount = document.getElementById("profileMount");
+  var mode = "signup";          // "signup" | "login"
+  var editing = false;
+  var busy = false;
+  var widgetId = null;          // current Turnstile widget
+
+  function accountsOn() {
+    return typeof leaderboardEnabled === "function" && leaderboardEnabled()
+      && !!window.sbClient;
+  }
+  function captchaOn() {
+    return typeof turnstileEnabled === "function" && turnstileEnabled() && window.roundupTurnstileReady;
+  }
+  function esc(s) { return (typeof escapeHtml === "function") ? escapeHtml(String(s == null ? "" : s)) : String(s == null ? "" : s); }
+  function gradOptions(sel) {
+    return '<option value="">—</option>' + GRAD_YEARS.map(function (g) {
+      return '<option value="' + g + '"' + (sel === g ? " selected" : "") + ">&rsquo;" + g + "</option>";
+    }).join("");
+  }
+  function mountCaptcha() {
+    widgetId = null;
+    if (!captchaOn()) return;
+    var el = mount.querySelector(".cf-turnstile");
+    if (el && window.turnstile) {
+      try { widgetId = window.turnstile.render(el, { sitekey: TURNSTILE_SITEKEY }); } catch (e) { widgetId = null; }
+    }
+  }
+  function captchaToken() {
+    if (!captchaOn() || widgetId == null || !window.turnstile) return "";
+    try { return window.turnstile.getResponse(widgetId) || ""; } catch (e) { return ""; }
+  }
+  function captchaReset() {
+    if (widgetId != null && window.turnstile) { try { window.turnstile.reset(widgetId); } catch (e) {} }
+  }
+  function setErr(msg) {
+    var el = mount.querySelector('[data-role="err"]');
+    if (el) { el.textContent = msg || ""; el.hidden = !msg; }
+  }
+
+  /* ---------- views ---------- */
+  function renderProfile() {
+    if (!mount) return;
+
+    if (!accountsOn()) {
+      mount.innerHTML = '<div class="lb-panel"><p class="lb-empty">Accounts aren’t set up yet — check back soon. You can still play everything and track stats in this browser.</p></div>';
+      return;
+    }
+
+    var user = (typeof currentUser === "function") ? currentUser() : null;
+    var profile = (typeof currentProfile === "function") ? currentProfile() : null;
+
+    if (user && profile) { renderLoggedIn(profile); return; }
+    if (user && !profile) {
+      mount.innerHTML =
+        '<div class="lb-panel">' +
+          '<p class="lb-empty">Signed in, but your profile didn’t load. ' +
+          '<a href="#" data-role="retry">Try again</a> or ' +
+          '<a href="#" data-role="logout2">log out</a>.</p>' +
+        '</div>';
+      var r = mount.querySelector('[data-role="retry"]');
+      if (r) r.addEventListener("click", function (e) { e.preventDefault(); location.reload(); });
+      var l2 = mount.querySelector('[data-role="logout2"]');
+      if (l2) l2.addEventListener("click", function (e) {
+        e.preventDefault();
+        signOutAccount().then(function () { mode = "login"; renderProfile(); });
+      });
+      return;
+    }
+    renderAuth();
+  }
+
+  function renderAuth() {
+    var captchaHtml = (typeof turnstileEnabled === "function" && turnstileEnabled())
+      ? '<div class="cf-turnstile" data-sitekey="' + esc(TURNSTILE_SITEKEY) + '"></div>' : "";
+
+    if (mode === "signup") {
+      mount.innerHTML =
+        '<div class="lb-panel">' +
+          '<h2 class="section-head" style="margin-top:0">Create an account</h2>' +
+          '<p class="lb-identity__lead">Your name shows on the leaderboard as first name + last initial + grad year. Email is only used to recover your account.</p>' +
+          '<form class="lb-identity" data-role="form" autocomplete="off">' +
+            '<div class="lb-identity__fields">' +
+              '<label>Email<input type="email" name="email" required></label>' +
+              '<label>Password<input type="password" name="password" minlength="6" required></label>' +
+            '</div>' +
+            '<div class="lb-identity__fields">' +
+              '<label>First name<input type="text" name="firstName" maxlength="20" required></label>' +
+              '<label>Last initial<input type="text" name="lastInitial" maxlength="1"></label>' +
+              '<label>Grad year<select name="gradYear">' + gradOptions("") + '</select></label>' +
+            '</div>' +
+            captchaHtml +
+            '<button class="btn" type="submit">Create account</button>' +
+            '<p class="sidecard__hint" data-role="err" hidden></p>' +
+          '</form>' +
+          '<p class="lb-identity__lead">Already have an account? <a href="#" data-role="toLogin">Log in</a></p>' +
+        '</div>';
+    } else {
+      mount.innerHTML =
+        '<div class="lb-panel">' +
+          '<h2 class="section-head" style="margin-top:0">Log in</h2>' +
+          '<form class="lb-identity" data-role="form" autocomplete="off">' +
+            '<div class="lb-identity__fields">' +
+              '<label>Email<input type="email" name="email" required></label>' +
+              '<label>Password<input type="password" name="password" required></label>' +
+            '</div>' +
+            captchaHtml +
+            '<button class="btn" type="submit">Log in</button>' +
+            '<p class="sidecard__hint" data-role="err" hidden></p>' +
+          '</form>' +
+          '<p class="lb-identity__lead">' +
+            '<a href="report-bug.html">Forgot password?</a> &nbsp;&middot;&nbsp; ' +
+            'Need an account? <a href="#" data-role="toSignup">Create one</a>' +
+          '</p>' +
+        '</div>';
+    }
+
+    mount.querySelector('[data-role="form"]').addEventListener("submit", onAuthSubmit);
+    var toLogin = mount.querySelector('[data-role="toLogin"]');
+    var toSignup = mount.querySelector('[data-role="toSignup"]');
+    if (toLogin) toLogin.addEventListener("click", function (e) { e.preventDefault(); mode = "login"; renderProfile(); });
+    if (toSignup) toSignup.addEventListener("click", function (e) { e.preventDefault(); mode = "signup"; renderProfile(); });
+    mountCaptcha();
+  }
+
+  // Turn a Supabase auth error into something a student can act on.
+  function authErrText(err, fallback) {
+    if (!err) return fallback;
+    var code = (err.code || "").toLowerCase();
+    var msg = (err.message || "").toLowerCase();
+    if (code === "weak_password" || msg.indexOf("weak") !== -1 || msg.indexOf("pwned") !== -1 || msg.indexOf("known to be") !== -1)
+      return "That password is too easy to guess — try a longer or less common one.";
+    if (msg.indexOf("at least") !== -1 && msg.indexOf("character") !== -1)
+      return err.message; // "Password should be at least N characters" — already clear
+    if (code === "user_already_exists" || msg.indexOf("already registered") !== -1 || msg.indexOf("already been registered") !== -1)
+      return "That email already has an account. Try logging in instead.";
+    if (code === "invalid_credentials" || msg.indexOf("invalid login") !== -1)
+      return "Email or password doesn’t match. Check both and try again.";
+    if (msg.indexOf("email not confirmed") !== -1)
+      return "Confirm your email first — check your inbox for the link.";
+    if (code.indexOf("rate") !== -1 || msg.indexOf("rate limit") !== -1 || msg.indexOf("security purposes") !== -1)
+      return "Too many tries just now — wait a minute and try again.";
+    if (msg.indexOf("captcha") !== -1)
+      return "The “I’m human” check didn’t go through — try it again.";
+    if (msg.indexOf("valid email") !== -1 || msg.indexOf("invalid email") !== -1)
+      return "That doesn’t look like a valid email address.";
+    return err.message || fallback;
+  }
+
+  function onAuthSubmit(e) {
+    e.preventDefault();
+    if (busy) return;
+    var f = e.target.elements;
+    var email = (f.namedItem("email").value || "").trim();
+    var password = f.namedItem("password").value || "";
+
+    if (mode === "signup") {
+      var firstName = (f.namedItem("firstName").value || "").trim();
+      var lastInitial = (f.namedItem("lastInitial").value || "").trim();
+      var gradYear = f.namedItem("gradYear").value || "";
+      if (!firstName) { setErr("Enter a first name."); return; }
+      if (password.length < 6) { setErr("Password must be at least 6 characters."); return; }
+      if (typeof lbNameLooksBad === "function" && lbNameLooksBad(firstName, lastInitial)) {
+        setErr("That name can’t be used — please pick another."); return;
+      }
+      if ((typeof turnstileEnabled === "function" && turnstileEnabled()) && !captchaToken()) {
+        setErr("Please complete the “I’m human” check."); return;
+      }
+      setErr(""); busy = true;
+      signUpAccount({
+        email: email, password: password,
+        firstName: firstName, lastInitial: lastInitial, gradYear: gradYear,
+        captchaToken: captchaToken()
+      }).then(function (res) {
+        busy = false;
+        if (res.error) { captchaReset(); setErr(authErrText(res.error, "Could not create the account.")); return; }
+        if (res.data && !res.data.session) {
+          mount.innerHTML = '<div class="lb-panel"><p class="lb-empty">Account created. Check your email to confirm it, then come back and log in.</p></div>';
+          return;
+        }
+        // signed in — onAuthStateChange -> renderProfile()
+      });
+    } else {
+      if ((typeof turnstileEnabled === "function" && turnstileEnabled()) && !captchaToken()) {
+        setErr("Please complete the “I’m human” check."); return;
+      }
+      setErr(""); busy = true;
+      signIn({ email: email, password: password, captchaToken: captchaToken() }).then(function (res) {
+        busy = false;
+        if (res.error) { captchaReset(); setErr(authErrText(res.error, "Could not log in.")); return; }
+        // signed in — onAuthStateChange -> renderProfile()
+      });
+    }
+  }
+
+  function renderLoggedIn(profile) {
+    var name = esc(profile.first_name || "");
+    var initial = profile.last_initial ? " " + esc(profile.last_initial) + "." : "";
+    var grad = profile.grad_year ? " &rsquo;" + esc(profile.grad_year) : "";
+
+    var editForm = editing
+      ? '<form class="lb-identity" data-role="editForm" autocomplete="off">' +
+          '<div class="lb-identity__fields">' +
+            '<label>First name<input type="text" name="firstName" maxlength="20" value="' + name + '" required></label>' +
+            '<label>Last initial<input type="text" name="lastInitial" maxlength="1" value="' + esc(profile.last_initial || "") + '"></label>' +
+            '<label>Grad year<select name="gradYear">' + gradOptions(profile.grad_year || "") + '</select></label>' +
+          '</div>' +
+          '<div class="profile-actions">' +
+            '<button class="btn" type="submit">Save</button>' +
+            '<button class="btn btn--ghost" type="button" data-role="cancelEdit">Cancel</button>' +
+          '</div>' +
+          '<p class="sidecard__hint" data-role="err" hidden></p>' +
+        '</form>'
+      : '';
+
+    mount.innerHTML =
+      '<div class="lb-panel">' +
+        '<div class="profile-head">' +
+          '<div>' +
+            '<p class="lb-identity__lead" style="margin-bottom:.15rem">Signed in as</p>' +
+            '<p class="profile-name">' + (name || "—") + initial + '<span class="lb-grade">' + grad + '</span></p>' +
+          '</div>' +
+          '<div class="profile-actions">' +
+            (editing ? '' : '<button class="btn btn--ghost" type="button" data-role="edit">Edit</button>') +
+            '<button class="btn btn--ghost" type="button" data-role="logout">Log out</button>' +
+          '</div>' +
+        '</div>' +
+        editForm +
+        '<p class="lb-identity__lead">Your stats below sync to this account — log in on another device to pick up where you left off.</p>' +
+      '</div>' +
+      '<h2 class="section-head section-head--spaced">Your Stats</h2>' +
+      '<div class="stats-grid" id="statsList"></div>' +
+      '<p class="stats-note">Synced to your account. They also stay in this browser, so clearing site data here won’t lose them.</p>';
+
+    if (typeof renderStatsPage === "function") renderStatsPage();
+
+    var editBtn = mount.querySelector('[data-role="edit"]');
+    if (editBtn) editBtn.addEventListener("click", function () { editing = true; renderProfile(); });
+    var cancelBtn = mount.querySelector('[data-role="cancelEdit"]');
+    if (cancelBtn) cancelBtn.addEventListener("click", function () { editing = false; renderProfile(); });
+    var logoutBtn = mount.querySelector('[data-role="logout"]');
+    if (logoutBtn) logoutBtn.addEventListener("click", function () {
+      if (busy) return; busy = true;
+      signOutAccount().then(function () { busy = false; editing = false; mode = "login"; renderProfile(); });
+    });
+    var ef = mount.querySelector('[data-role="editForm"]');
+    if (ef) ef.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (busy) return;
+      var f = e.target.elements;
+      var firstName = (f.namedItem("firstName").value || "").trim();
+      var lastInitial = (f.namedItem("lastInitial").value || "").trim();
+      var gradYear = f.namedItem("gradYear").value || "";
+      if (!firstName) { setErr("Enter a first name."); return; }
+      if (typeof lbNameLooksBad === "function" && lbNameLooksBad(firstName, lastInitial)) {
+        setErr("That name can’t be used — please pick another."); return;
+      }
+      setErr(""); busy = true;
+      updateProfile({ firstName: firstName, lastInitial: lastInitial, gradYear: gradYear }).then(function (res) {
+        busy = false;
+        if (res.error) { setErr(res.error.message || "Could not save."); return; }
+        editing = false; renderProfile();
+      });
+    });
+  }
+
+  window.renderProfile = renderProfile;
+  document.addEventListener("roundup:authchange", function () { editing = false; renderProfile(); });
+  document.addEventListener("roundup:statschange", function () {
+    if (document.getElementById("statsList") && typeof renderStatsPage === "function") renderStatsPage();
+  });
+  if (window.authReady && window.authReady.then) window.authReady.then(renderProfile);
+  else renderProfile();
+})();
+</script>
+</body>
+</html>

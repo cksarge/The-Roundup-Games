@@ -1074,6 +1074,27 @@ a{ color:inherit; }
   font-size:0.9rem;
   color:var(--ink-soft);
 }
+
+/* profile.html — account header */
+.profile-head{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:1rem;
+}
+.profile-name{
+  margin:0;
+  font-family:var(--font-display, var(--font-body));
+  font-size:1.4rem;
+  color:var(--ink);
+}
+.profile-actions{
+  display:flex;
+  gap:0.6rem;
+  flex-wrap:wrap;
+}
+
 .lb-list{
   list-style:none;
   margin:0;

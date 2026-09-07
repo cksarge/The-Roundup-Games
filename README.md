@@ -12,7 +12,8 @@ Live features:
 - **Bronco Splash** — a persistent swim-a-lap game. Answer trivia to refill your air and pick up speed before it runs out
 - **Bronco Blitz** — a persistent 30-second trivia speed round. Answer A/B/C/D questions for 100 points each, times a streak multiplier that grows the longer your correct-answer streak runs, plus a speed bonus for fast answers; a wrong answer breaks the streak and locks you out for 3 seconds while the clock keeps running
 - **Archive** — every past edition, auto-populated as new puzzles go live
-- **Leaderboard & Stats** (`stats.html`) — your own win counts and streaks, tracked in your browser, plus a shared weekly **Leaderboard** (Supabase): Bronco Blitz high score **and** all-rounds-added-up total; fastest time for the other Bronco games; fastest solve for the Print Edition Crossword; fastest solve + longest streak for the Weekly Crossword / Word Search / Special Edition. Each has a this-week and an all-time view. Opt-in; keys live in `config.js` (see [Leaderboard (Supabase)](#leaderboard-supabase))
+- **Leaderboard** (`leaderboard.html`) — a shared weekly leaderboard (Supabase): Bronco Blitz high score **and** all-rounds-added-up total; fastest time for the other Bronco games; fastest solve for the Print Edition Crossword; fastest solve + longest streak for the Weekly Crossword / Word Search / Special Edition. Each has a this-week and an all-time view. **Anyone can view it; posting a score needs an account.**
+- **Profile / accounts** (`profile.html`) — sign up with an email (recovery only), password, first name, last initial, and grad year, and your stats (win counts, streaks, fastest times, high scores, lifetime points) **save to the account and reload on any device you sign in on**. Points you racked up before signing up carry over. Your own stats live here now, not on the leaderboard page. See [Accounts (Supabase Auth)](#accounts-supabase-auth). Playing never requires an account — the only prompt is at the "post this score" moment.
 - **Per-game cards** — under every game: a live "Your Stats" card that pops when a number goes up, and a "Share This Game" card with two links — *play the exact same set* (no score attached) and *challenge them* (with your score to beat)
 
 **Retired (v1.5):** Daily Crossword and Guess the Teacher are no longer published. Their pages, homepage cards, and nav links are gone, but every past edition stays playable at the bottom of the Archive.
@@ -38,7 +39,7 @@ See the comments at the top of `config.js` for the full breakdown of `WEEKLY_PUZ
 ## Project structure
 
 ```
-index.html               Homepage — a hub linking to Games, Stats, Archive, and About (plus the Special Edition banner when one is live)
+index.html               Homepage — a hub linking to Games, Leaderboard, Profile, Archive, and About (plus the Special Edition banner when one is live)
 games.html                The full games list — cards for every game, pulled from GAMES in config.js (what the homepage used to be)
 about.html                About page — who makes The Roundup Games, the opinions/copyright notice, and how to get in touch
 weekly-crossword.html     This week's Weekly Crossword
@@ -49,16 +50,22 @@ bronco-dash.html          Bronco Dash (persistent track game)
 bronco-splash.html        Bronco Splash (persistent swimming game)
 bronco-blitz.html         Bronco Blitz (persistent trivia speed round)
 archive.html              Past editions of every game
-stats.html                Leaderboard & Stats — per-browser win counts/streaks + the shared weekly leaderboard
+leaderboard.html          The shared weekly leaderboard (view-only for everyone; posting a score needs an account)
+profile.html              Account: sign up / log in, edit your name, and see your own synced stats. Shows just the sign-up form until you have an account
+stats.html                Redirect stub → leaderboard.html (kept so old links/bookmarks don't 404)
 report-bug.html           "Bug Report / Contact" — embeds the Google Form used for bug reports and for contacting the editors (BUG_REPORT_FORM_URL in config.js)
 404.html                  Shown for any URL that doesn't match a real page
-config.js                 All puzzle content + shared rendering logic (incl. the per-game stats/share cards + puzzle solve-tracking)
-leaderboard.js            Shared weekly leaderboard client (Supabase REST). Keys live in config.js; blank them to switch it off
-blocked-words.csv/.sql    LDNOOBW profanity list (CSV import + ready-to-run INSERT) for the Supabase blocked_words table; also inlined in leaderboard.js
+config.js                 All puzzle content + shared rendering logic (per-game stats/share cards, puzzle solve-tracking + reveal-assist guard, the name blocklist, Supabase/Turnstile keys)
+auth.js                   Accounts client — builds the supabase-js client, handles sign-in/out, and merges + syncs stats to the signed-in account
+leaderboard.js            Weekly leaderboard client — reads via Supabase REST, writes via the auth.js client (needs an account). Blank the keys in config.js to switch it off
+blocked-words.csv/.sql    LDNOOBW profanity list (CSV import + ready-to-run INSERT) for the Supabase blocked_words table; also inlined in config.js
 embed.js                  Iframe auto-resize helper (only does anything when the site is framed)
 styles.css                Shared styling for every page
 logo.png / favicon.png / apple-touch-icon.png   Site branding
 ```
+
+supabase-js is pulled from a CDN (`<script>` tag, no build step) — the site's one
+runtime dependency, used for accounts and for authenticated leaderboard writes.
 
 ### Per-game stats + challenge cards
 
@@ -94,72 +101,172 @@ The "Share This Game" card has two separate links:
   which shows the opener a "beat this" banner.
 
 The player's name / last initial / grad year lives in `localStorage` under
-`roundup:identity` — the **same** record the leaderboard sign-in uses. (The
-`grade` field holds a 2-digit graduation year, e.g. `27`, shown as `’27`.)
+`roundup:identity` (the `grade` field is a 2-digit grad year, e.g. `27`, shown as
+`’27`). When someone is signed in, `auth.js` keeps this record in sync with their
+account profile, so the challenge links show their real name. Signed-out visitors
+have no identity here until they make an account.
 
-## Leaderboard (Supabase)
+## Accounts (Supabase Auth)
 
 `SUPABASE_URL` / `SUPABASE_ANON_KEY` at the top of `config.js` point at the
-project's REST API. The anon key is meant to ship in client code — Row Level
-Security + a name-check trigger on the `scores` table are the real guard. **Blank
-both keys and push** to switch every leaderboard feature back off instantly (it
-drops to a quiet "not set up yet" line; the stats cards and share links don't
-depend on it).
+project's API. The anon key is meant to ship in client code — Row Level Security
+plus the triggers below are the real guard. **Blank both keys and push** to
+switch accounts *and* the leaderboard back off (the leaderboard drops to a quiet
+"not set up yet" line; per-browser stats, the per-game cards, and the share links
+don't depend on any of this).
 
-### One-time table setup
+Accounts do two things: they let a player's stats follow them between devices,
+and they're what's allowed to post to the leaderboard (the old "type any name"
+box is gone). `auth.js` builds the client, `profile.html` is the sign-up / login
+/ profile screen, and `renderStatsPage()` shows the player's own stats there.
 
-Run in the Supabase **SQL Editor**:
+### 1. Auth settings (dashboard)
+
+- **Authentication → Providers → Email:** enabled.
+- **Confirm email** — either setting works, the client handles both:
+  - **ON (Supabase default):** the new player gets a confirmation email, clicks
+    the link, then logs in and can post. `profile.html` shows a "check your
+    email" note after signup. Bonus: it proves the recovery address is real.
+    Set **Authentication → URL Configuration → Site URL** to the live site
+    (e.g. `https://cksarge.github.io/The-Roundup-Games/`) and add
+    `…/profile.html` to **Redirect URLs** so the link lands them back on the
+    profile page (`auth.js` passes `emailRedirectTo`).
+  - **OFF:** signup returns a session immediately — no email round-trip. The
+    toggle is under the **Email** provider row; if your dashboard version hides
+    it, set it via the Management API
+    (`PATCH /v1/projects/{ref}/config/auth` → `{"mailer_autoconfirm": true}`)
+    or `supabase/config.toml` → `[auth.email] enable_confirmations = false`.
+- **Password reset** is manual: the "Forgot password?" link on `profile.html`
+  goes to the Bug Report / Contact form. Reset the password from
+  **Authentication → Users** when someone writes in.
+
+### 2. Cloudflare Turnstile (bot check on signup + login)
+
+1. Cloudflare dashboard → **Turnstile** → add a widget for the site's domain (add
+   the SNO/WordPress domain too if signup should work inside the embed). Note the
+   **site key** (public) and **secret key** (private).
+2. Supabase → **Authentication → Attack Protection → Enable CAPTCHA protection**,
+   provider **Turnstile**, paste the **secret key**. Supabase now rejects any
+   signup / login / recovery call without a valid token — it's global for those
+   endpoints, so the client sends one from both forms.
+3. Put the **site key** in `config.js` as `TURNSTILE_SITEKEY`.
+
+Blank `TURNSTILE_SITEKEY` **and** turn the Supabase CAPTCHA setting off to disable
+it. For local dev use Cloudflare's always-passes test key
+`1x00000000000000000000AA` (and keep the Supabase setting off, or it still demands
+a real token).
+
+### 3. Tables, policies, triggers (SQL Editor)
+
+This **drops and recreates `scores`** — do it on a fresh project or one whose
+leaderboard is throwaway test data.
 
 ```sql
-create table if not exists public.scores (
+-- ---------- profiles: the public display identity for an account ----------
+create table public.profiles (
+  id           uuid primary key references auth.users(id) on delete cascade,
+  first_name   text not null,
+  last_initial text not null default '',
+  grad_year    text not null default '',
+  created_at   timestamptz not null default now(),
+  constraint profiles_first_len check (char_length(first_name) between 1 and 20),
+  constraint profiles_init_len  check (char_length(last_initial) <= 1),
+  constraint profiles_grad_ok   check (grad_year in ('','27','28','29','30','31','32','33'))
+);
+-- no uniqueness on the name triple — two real "John S. '27"s are allowed;
+-- the leaderboard de-dupes by account (user_id), not by name string.
+alter table public.profiles enable row level security;
+create policy "profiles public read" on public.profiles for select to anon, authenticated using (true);
+create policy "profiles self insert" on public.profiles for insert to authenticated with check (auth.uid() = id);
+create policy "profiles self update" on public.profiles for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+
+-- ---------- user_stats: one JSON blob per account, owner-only ----------
+create table public.user_stats (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  data       jsonb not null default '{}',
+  updated_at timestamptz not null default now()
+);
+alter table public.user_stats enable row level security;
+create policy "user_stats self read"   on public.user_stats for select to authenticated using (auth.uid() = user_id);
+create policy "user_stats self insert" on public.user_stats for insert to authenticated with check (auth.uid() = user_id);
+create policy "user_stats self update" on public.user_stats for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------- scores: wipe + recreate, now tied to an account ----------
+drop table if exists public.scores cascade;
+create table public.scores (
   id           uuid primary key default gen_random_uuid(),
   created_at   timestamptz not null default now(),
+  user_id      uuid not null references auth.users(id) on delete cascade,
   game_id      text not null,
   board        text not null,                 -- 'weekly' | 'alltime'
   week_key     text not null,                 -- ISO week e.g. '2026-W37', or 'all'
   metric       text not null,                 -- 'score' | 'time' | 'streak'
   value        numeric not null,
-  name         text not null,
-  last_initial text not null default '',
-  grade        text not null default '',
-  client_id    text not null default '',
+  name         text not null default '',      -- stamped from the profile by a trigger
+  last_initial text not null default '',      -- "
+  grade        text not null default '',      -- "
   constraint scores_game_ok   check (game_id in (
                  'broncoBlitz','broncoDash','broncoSplash',
                  'weeklyCrossword','weeklyWordSearch','printCrossword','specialEdition')),
   constraint scores_board_ok  check (board in ('weekly','alltime')),
   constraint scores_metric_ok check (metric in ('score','time','streak')),
-  constraint scores_value_ok  check (value >= 0 and value < 10000000),
-  constraint scores_name_len  check (char_length(name) between 1 and 20),
-  constraint scores_init_len  check (char_length(last_initial) <= 1),
-  constraint scores_grade_ok  check (grade in ('','27','28','29','30','31','32','33'))  -- 2-digit grad year
+  constraint scores_value_ok  check (value >= 0 and value < 10000000)
 );
-create index if not exists scores_lookup
-  on public.scores (game_id, board, week_key, metric, value);
+create index scores_lookup on public.scores (game_id, board, week_key, metric, value);
 
 alter table public.scores enable row level security;
-create policy "public read"   on public.scores for select to anon using (true);
-create policy "public insert" on public.scores for insert to anon with check (true);
--- no update/delete policy → the anon key can't change or remove rows (you can, from the dashboard)
+create policy "scores public read"  on public.scores for select to anon, authenticated using (true);
+create policy "scores owner insert" on public.scores for insert to authenticated with check (auth.uid() = user_id);
+-- no update/delete policy → clients can't change or remove rows (you can, from the dashboard)
+
+-- ---------- stamp name / last_initial / grade from the poster's profile ----------
+create or replace function public.stamp_score_identity() returns trigger as $$
+begin
+  select p.first_name, p.last_initial, p.grad_year
+    into new.name, new.last_initial, new.grade
+    from public.profiles p where p.id = new.user_id;
+  if new.name is null then
+    raise exception 'no profile for this account';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists scores_stamp_identity on public.scores;
+create trigger scores_stamp_identity before insert on public.scores
+  for each row execute function public.stamp_score_identity();
+
+-- ---------- create profile + empty stats row on signup ----------
+-- reads the fields the client passes in options.data on signUp()
+create or replace function public.handle_new_user() returns trigger as $$
+begin
+  insert into public.profiles (id, first_name, last_initial, grad_year)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'first_name', ''),
+    coalesce(new.raw_user_meta_data->>'last_initial', ''),
+    coalesce(new.raw_user_meta_data->>'grad_year', '')
+  );
+  insert into public.user_stats (user_id) values (new.id);
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users
+  for each row execute function public.handle_new_user();
 ```
 
-> Already created the table from an earlier version? Bring the constraints up to date:
-> ```sql
-> alter table public.scores drop constraint scores_metric_ok,
->   add constraint scores_metric_ok check (metric in ('score','time','streak'));
-> alter table public.scores drop constraint scores_grade_ok,
->   add constraint scores_grade_ok check (grade in ('','27','28','29','30','31','32','33'));
-> alter table public.scores drop constraint scores_game_ok,
->   add constraint scores_game_ok check (game_id in (
->     'broncoBlitz','broncoDash','broncoSplash',
->     'weeklyCrossword','weeklyWordSearch','printCrossword','specialEdition'));
-> ```
+A blocked-word first name makes `handle_new_user` fail (via the moderation
+trigger below), which rolls the whole signup back; `profile.html` also pre-checks
+with the same list for instant feedback.
 
-### Bad-name filter (the real moderation layer)
+### 4. Bad-name filter (the real moderation layer)
 
 Two parts: a `blocked_words` table holding the full **LDNOOBW** English list
 (~400 terms,
 [github.com/LDNOOBW](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words)),
-and a trigger that checks each submitted name against it.
+and a trigger that checks each new profile's name against it.
 
 **1. Create + fill the table.** Use the SQL editor — most reliable:
 
@@ -175,7 +282,8 @@ header row and one term per line. The importer will warn "Unable to auto-detect
 delimiting character; defaulted to ','" — that's harmless, there are no commas in
 the data; just proceed.)*
 
-**2. The trigger.**
+**2. The trigger — on `profiles` now** (names only ever enter through signup /
+profile edit; scores copy their name from an already-checked profile):
 
 ```sql
 create or replace function public.reject_bad_name() returns trigger as $$
@@ -184,7 +292,7 @@ declare
   -- listed phrase like "blow job" or "dirty sanchez" can only ever
   -- match a single field's own words, not name+initial glued together)
   name_norm text := trim(regexp_replace(
-    translate(lower(coalesce(new.name,'')), '4@31!|05$7', 'aaeiiioost'),
+    translate(lower(coalesce(new.first_name,'')), '4@31!|05$7', 'aaeiiioost'),
     '[^a-z]+', ' ', 'g'));
   init_norm text := trim(regexp_replace(
     translate(lower(coalesce(new.last_initial,'')), '4@31!|05$7', 'aaeiiioost'),
@@ -216,22 +324,39 @@ begin
 end;
 $$ language plpgsql;
 
-drop trigger if exists scores_name_check on public.scores;
-create trigger scores_name_check before insert on public.scores
+drop trigger if exists profiles_name_check on public.profiles;
+create trigger profiles_name_check before insert or update on public.profiles
   for each row execute function public.reject_bad_name();
 ```
 
-The trigger is authoritative. `leaderboard.js` carries the same list
-(`LB_BLOCKED` + `LB_SLUR_ROOTS`) only for instant in-form feedback — if you edit
-one, edit the other (and `blocked-words.csv` / `blocked-words.sql`).
-
+The trigger is authoritative. `config.js` carries the same list (`LB_BLOCKED` +
+`LB_SLUR_ROOTS`, with `lbNameLooksBad()`) only for instant in-form feedback — if
+you edit one, edit the other (and `blocked-words.csv` / `blocked-words.sql`).
 Because the full list is matched as **whole words**, a real first name that only
 *contains* a listed term (Cassandra, Cassidy, Titus…) is fine; a name that **is**
-one (or a token of it) is rejected and the form says "pick another."
+one is rejected and the form says "pick another."
 
-Every row carries `name` + grad year + `created_at` + a random per-browser
-`client_id`, and you can delete any row from the dashboard — that's the trace if
-you need one. (No IP or other network metadata is collected.)
+## Leaderboard (Supabase)
+
+Reads are public (anon `fetch` in `leaderboard.js`); the board looks and works
+exactly as before. **Writes** now go through the signed-in user's session
+(`window.sbClient` from `auth.js`): a row carries only `game_id` + `user_id` +
+the metric/value/bucket, the `scores_stamp_identity` trigger fills in the display
+name from the poster's profile, and RLS requires `auth.uid() = user_id`, so
+nobody can post as someone else. Boards de-dupe by `user_id`.
+
+Each row carries the stamped `name` + grad year + `created_at` + the `user_id`,
+and you can delete any row from the dashboard — that's the trace if you need one.
+(No IP or other network metadata is collected.)
+
+### Session persistence caveat
+
+`auth.js` (via supabase-js) keeps the session in `localStorage`. Visiting the
+site directly, that's rock-solid. Inside the cross-origin SNO/WordPress
+`<iframe>`, storage partitioning means some browsers (notably Safari) may not
+keep a player signed in between visits — everything still works, they just have
+to log in again. Stat writes are last-write-wins if the same account is somehow
+active on two devices at once.
 
 ### Day to day
 
@@ -295,6 +420,46 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Version 2.1 — September 2026
+
+**Accounts.** The site gets a real login, so stats follow the player between
+devices and the leaderboard is no longer a "type any name" free-for-all.
+
+- **New `profile.html`** — sign up (email for recovery only, password, first
+  name, last initial, grad year), log in, edit the profile, and see **your own
+  stats** (moved off the leaderboard page — `renderStatsPage()` runs here now).
+  Signed out, the page is just the sign-up form. Built on **Supabase Auth**;
+  **Cloudflare Turnstile** guards signup + login (`TURNSTILE_SITEKEY` in
+  `config.js`). "Forgot password?" points at the Bug Report / Contact form —
+  resets are manual from the dashboard.
+- **New `auth.js`** — builds the one supabase-js client (loaded from a CDN, the
+  site's first runtime dependency), handles the session, keeps `roundup:identity`
+  in sync with the account, and on login **merges** this browser's stats with the
+  account's (win-id lists union; fastest time takes the min; high score + lifetime
+  points take the max, so pre-signup points carry over) then keeps pushing
+  changes up, debounced.
+- **`stats.html` → `leaderboard.html`** (board only, unchanged look);
+  `stats.html` stays as a redirect stub. Nav on every page now has **Leaderboard**
+  + **Profile**. `leaderboard.js` reads stay anon; **writes need an account** and
+  go through `sbClient` — rows carry only `user_id` + the score, and a Supabase
+  trigger stamps the display name from the poster's profile (no more spoofing).
+  Boards de-dupe by account.
+- **Supabase**: new `profiles` + `user_stats` tables, `scores` **wiped and
+  recreated** with a `user_id`, new RLS + `handle_new_user` / `stamp_score_identity`
+  triggers, and the LDNOOBW name-check trigger moved from `scores` to `profiles`.
+  The client blocklist (`LB_BLOCKED` / `lbNameLooksBad`) moved from
+  `leaderboard.js` to `config.js`. Full SQL in the **Accounts (Supabase Auth)**
+  section.
+- **Reveal-assist fix:** a crossword finished with AmuseLabs' reveal/check no
+  longer posts a leaderboard time. AmuseLabs' free tier exposes no "assisted"
+  flag, so `config.js` gates the time on plausibility — a real solve takes more
+  than a few seconds *and* produces a stream of interaction messages; a
+  reveal-the-grid completion clears neither. Such a solve still counts as a win
+  and for the streak, it just carries no time (`MIN_UNASSISTED_SECONDS`, tunable;
+  the interaction count is only a weak tiebreaker). A few revealed letters inside
+  a long genuine solve still won't be caught — that needs AmuseLabs' paid
+  Contest Mode.
 
 ### Version 2.0.6 — September 2026
 - **Games page: the "nothing live" Special Edition card now sits at the very

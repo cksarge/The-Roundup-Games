@@ -123,22 +123,16 @@ box is gone). `auth.js` builds the client, `profile.html` is the sign-up / login
 ### 1. Auth settings (dashboard)
 
 - **Authentication → Providers → Email:** enabled.
-- **Confirm email** — either setting works, the client handles both:
-  - **ON (Supabase default):** the new player gets a confirmation email, clicks
-    the link, then logs in and can post. `profile.html` shows a "check your
-    email" note after signup. Bonus: it proves the recovery address is real.
-    Set **Authentication → URL Configuration → Site URL** to the live site
-    (e.g. `https://cksarge.github.io/The-Roundup-Games/`) and add
-    `…/profile.html` to **Redirect URLs** so the link lands them back on the
-    profile page (`auth.js` passes `emailRedirectTo`).
-  - **OFF:** signup returns a session immediately — no email round-trip. The
-    toggle is under the **Email** provider row; if your dashboard version hides
-    it, set it via the Management API
-    (`PATCH /v1/projects/{ref}/config/auth` → `{"mailer_autoconfirm": true}`)
-    or `supabase/config.toml` → `[auth.email] enable_confirmations = false`.
-- **Password reset** is manual: the "Forgot password?" link on `profile.html`
-  goes to the Bug Report / Contact form. Reset the password from
-  **Authentication → Users** when someone writes in.
+- **Confirm email: OFF.** The site sends **no email of any kind** — no
+  confirmation, no reset links — so no custom SMTP is needed. `signUp` returns a
+  session immediately and the player can post right away. The toggle is on the
+  **Email** provider row; if your dashboard hides it, use the Management API
+  (`PATCH /v1/projects/{ref}/config/auth` → `{"mailer_autoconfirm": true}`) or
+  `supabase/config.toml` → `[auth.email] enable_confirmations = false`.
+- **Email** is still a required sign-up field — it's how you identify someone for
+  a **manual password reset**. When a player writes in (the "Forgot password?"
+  link on `profile.html` goes to the Bug Report / Contact form), reset it from
+  **Authentication → Users** in the dashboard.
 
 ### 2. Cloudflare Turnstile (bot check on signup + login)
 
@@ -147,8 +141,8 @@ box is gone). `auth.js` builds the client, `profile.html` is the sign-up / login
    **site key** (public) and **secret key** (private).
 2. Supabase → **Authentication → Attack Protection → Enable CAPTCHA protection**,
    provider **Turnstile**, paste the **secret key**. Supabase now rejects any
-   signup / login / recovery call without a valid token — it's global for those
-   endpoints, so the client sends one from both forms.
+   signup or login call without a valid token, so the client sends one from both
+   forms.
 3. Put the **site key** in `config.js` as `TURNSTILE_SITEKEY`.
 
 Blank `TURNSTILE_SITEKEY` **and** turn the Supabase CAPTCHA setting off to disable
@@ -421,18 +415,28 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 2.1.1 — September 2026
+
+- **Dropped email confirmation entirely.** The site sends no email of any kind:
+  "Confirm email" stays off in Supabase, `signUp` returns a session right away,
+  and `profile.html` / `auth.js` no longer have the confirm-your-email screen,
+  the resend button, or the expired-link handler. Email is still a required
+  sign-up field — it's how you identify someone for a manual password reset
+  (done from the dashboard). No custom SMTP needed.
+
 ### Version 2.1 — September 2026
 
 **Accounts.** The site gets a real login, so stats follow the player between
 devices and the leaderboard is no longer a "type any name" free-for-all.
 
-- **New `profile.html`** — sign up (email for recovery only, password, first
-  name, last initial, grad year), log in, edit the profile, and see **your own
-  stats** (moved off the leaderboard page — `renderStatsPage()` runs here now).
-  Signed out, the page is just the sign-up form. Built on **Supabase Auth**;
-  **Cloudflare Turnstile** guards signup + login (`TURNSTILE_SITEKEY` in
-  `config.js`). "Forgot password?" points at the Bug Report / Contact form —
-  resets are manual from the dashboard.
+- **New `profile.html`** — sign up (email for account recovery only, password,
+  first name, last initial, grad year), log in, edit the profile, and see **your
+  own stats** (moved off the leaderboard page — `renderStatsPage()` runs here
+  now). Signed out, the page is just the sign-up form. Built on **Supabase
+  Auth**; **Cloudflare Turnstile** guards signup + login (`TURNSTILE_SITEKEY` in
+  `config.js`). No emails are sent — "Confirm email" is off; "Forgot password?"
+  points at the Bug Report / Contact form and resets are done manually from the
+  dashboard.
 - **New `auth.js`** — builds the one supabase-js client (loaded from a CDN, the
   site's first runtime dependency), handles the session, keeps `roundup:identity`
   in sync with the account, and on login **merges** this browser's stats with the

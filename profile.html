@@ -167,7 +167,7 @@
       mount.innerHTML =
         '<div class="lb-panel">' +
           '<h2 class="section-head" style="margin-top:0">Create an account</h2>' +
-          '<p class="lb-identity__lead">Your name shows on the leaderboard as first name + last initial + grad year. Email is only used to recover your account.</p>' +
+          '<p class="lb-identity__lead">Your name shows on the leaderboard as first name + last initial + grad year. Email is only used so we can help you recover your account.</p>' +
           '<form class="lb-identity" data-role="form" autocomplete="off">' +
             '<div class="lb-identity__fields">' +
               '<label>Email<input type="email" name="email" required></label>' +
@@ -225,8 +225,6 @@
       return "That email already has an account. Try logging in instead.";
     if (code === "invalid_credentials" || msg.indexOf("invalid login") !== -1)
       return "Email or password doesn’t match. Check both and try again.";
-    if (msg.indexOf("email not confirmed") !== -1)
-      return "Confirm your email first — check your inbox for the link.";
     if (code.indexOf("rate") !== -1 || msg.indexOf("rate limit") !== -1 || msg.indexOf("security purposes") !== -1)
       return "Too many tries just now — wait a minute and try again.";
     if (msg.indexOf("captcha") !== -1)
@@ -264,7 +262,11 @@
         busy = false;
         if (res.error) { captchaReset(); setErr(authErrText(res.error, "Could not create the account.")); return; }
         if (res.data && !res.data.session) {
-          mount.innerHTML = '<div class="lb-panel"><p class="lb-empty">Account created. Check your email to confirm it, then come back and log in.</p></div>';
+          // No session back (e.g. "Confirm email" is on in Supabase).
+          // Just send them to the log-in form.
+          mode = "login";
+          renderAuth();
+          setErr("Account created — log in below.");
           return;
         }
         // signed in — onAuthStateChange -> renderProfile()

@@ -88,7 +88,17 @@ function lbHeaders(extra){
   if (extra) Object.keys(extra).forEach(k => { h[k] = extra[k]; });
   return h;
 }
+/* The single choke point for every leaderboard write. Refuses ALL
+   inserts when the page is opened with ?ignoresort=true — that switch
+   surfaces not-yet-released puzzles as "current" (see PREVIEW_UNRELEASED
+   in config.js), so any score from such a session would be for a
+   puzzle nobody else can play yet. Blocked here no matter which path
+   calls it. */
+function lbScoreSavingBlocked(){
+  return typeof PREVIEW_UNRELEASED !== "undefined" && PREVIEW_UNRELEASED;
+}
 function lbInsert(rows){
+  if (lbScoreSavingBlocked()) return Promise.resolve(false);
   if (!leaderboardEnabled() || !window.sbClient || !rows || !rows.length) return Promise.resolve(false);
   return window.sbClient.from("scores").insert(rows)
     .then(({ error }) => !error)
@@ -368,6 +378,13 @@ function lbPostPuzzleSolve(gameId){
   const host = document.getElementById("leaderboardSubmitMount");
   if (!leaderboardEnabled() || !g || g.kind !== "puzzle" || !winId) return Promise.resolve(false);
 
+  // preview URL (?ignoresort=true) — never post, never set the posted
+  // flag, so a later normal visit can still submit.
+  if (lbScoreSavingBlocked()) {
+    if (host) host.innerHTML = `<p class="lb-submit">Preview mode — solves from this URL aren&rsquo;t posted to the leaderboard.</p>`;
+    return Promise.resolve(false);
+  }
+
   const rec = (typeof puzzleSolveRecord === "function") ? puzzleSolveRecord(gameId, winId) : null;
   if (!rec) return Promise.resolve(false); // not solved yet
 
@@ -432,6 +449,12 @@ function lbAttachGamePage(gameId){
     if (!val) return;
     const host = document.getElementById("leaderboardSubmitMount");
     if (!host) return;
+
+    if (lbScoreSavingBlocked()) {
+      host.innerHTML = `<p class="lb-submit">Preview mode — scores from this URL aren&rsquo;t posted to the leaderboard.</p>`;
+      return;
+    }
+
     const user = (typeof currentUser === "function") ? currentUser() : null;
     const id = (typeof authIdentity === "function") ? authIdentity() : null;
     const shown = val.metric === "time" ? formatTime(val.value) : Number(val.value).toLocaleString();

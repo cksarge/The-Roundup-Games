@@ -129,7 +129,7 @@ const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
    Playing every game and per-browser stats are completely unaffected.
    Flip back to false to restore. (Blanking the two SUPABASE_ consts
    is still the permanent off switch; this is the reversible one.) */
-const LEADERBOARD_AND_ACCOUNTS_OFF = true;
+const LEADERBOARD_AND_ACCOUNTS_OFF = false;
 
 /* LEADERBOARD (Supabase) — see the "Leaderboard (Supabase)" section
    of the README for the table/RLS/trigger SQL.

@@ -115,6 +115,20 @@ switch accounts *and* the leaderboard back off (the leaderboard drops to a quiet
 "not set up yet" line; per-browser stats, the per-game cards, and the share links
 don't depend on any of this).
 
+**Temporary toggle:** `const LEADERBOARD_AND_ACCOUNTS_OFF` sits just above those
+keys. Set it to `true` and push to turn the Leaderboard **and** accounts/Profile
+off for everyone without disturbing the keys:
+
+- the "Leaderboard" and "Profile" nav links vanish site-wide, and so do the
+  matching hub cards on the homepage
+- the "All your stats →" link on each game's "Your Stats" card is dropped (the
+  card itself still shows this browser's numbers)
+- `leaderboard.html` and `profile.html` still load but fall back to the "check
+  back soon" line, and sign-up / log-in / stat sync go dark
+
+Set it back to `false` to restore exactly as before. (Blanking the keys is still
+the permanent off switch; this is the reversible one.)
+
 Accounts do two things: they let a player's stats follow them between devices,
 and they're what's allowed to post to the leaderboard (the old "type any name"
 box is gone). `auth.js` builds the client, `profile.html` is the sign-up / login

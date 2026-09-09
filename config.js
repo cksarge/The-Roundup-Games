@@ -116,6 +116,21 @@ const BUG_REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd06QWeyW1
    someone. Leave it as "" to hide that fallback line entirely. */
 const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
 
+/* TEMPORARY KILL SWITCH — flip to true to turn the Leaderboard AND
+   accounts/Profile OFF for everyone, without touching the Supabase
+   keys below. When on:
+     • the "Leaderboard" and "Profile" nav links are removed on every
+       page (see the DOMContentLoaded block at the bottom of this file)
+     • leaderboard.html + every in-page leaderboard panel drop to the
+       quiet "isn't set up yet — check back soon" line
+     • accounts go dark: auth.js builds no client, sign-up / log-in /
+       synced stats are unavailable, and profile.html shows the same
+       "check back soon" message
+   Playing every game and per-browser stats are completely unaffected.
+   Flip back to false to restore. (Blanking the two SUPABASE_ consts
+   is still the permanent off switch; this is the reversible one.) */
+const LEADERBOARD_AND_ACCOUNTS_OFF = true;
+
 /* LEADERBOARD (Supabase) — see the "Leaderboard (Supabase)" section
    of the README for the table/RLS/trigger SQL.
    -----------------------------------------------------------------
@@ -127,7 +142,7 @@ const BUG_REPORT_FORM_LINK = "https://forms.gle/X4fS7ke7pyWbm3Nu7";
    stats cards and challenge/same-set links don't depend on it). */
 const SUPABASE_URL = "https://wscjrgimchvfvmzaimhd.supabase.co/";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzY2pyZ2ltY2h2ZnZtemFpbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NzEwMTYsImV4cCI6MjEwNDA0NzAxNn0.CAQyR62LxFD4vSrjGDPxkShYEEcGQM1WfVF2ZC-qFtU";
-function leaderboardEnabled(){ return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
+function leaderboardEnabled(){ return !LEADERBOARD_AND_ACCOUNTS_OFF && !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
 
 /* ACCOUNTS (Supabase Auth) — see the README's "Accounts (Supabase
    Auth)" section for the tables / RLS / trigger SQL and the Cloudflare
@@ -148,7 +163,7 @@ function leaderboardEnabled(){ return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
    "1x00000000000000000000AA" (and keep the Supabase setting off, or
    it will still demand a real token). */
 const TURNSTILE_SITEKEY = "0x4AAAAAAEq3OqNkeAXGB0mw";
-function turnstileEnabled(){ return !!TURNSTILE_SITEKEY; }
+function turnstileEnabled(){ return !LEADERBOARD_AND_ACCOUNTS_OFF && !!TURNSTILE_SITEKEY; }
 
 /* ISO-week bucket like "2026-W36" — what the weekly boards group on.
    Monday-based, matches the site's "new games every school week"
@@ -775,7 +790,11 @@ function renderHomeCards(){
     }
   ];
   mount.innerHTML = "";
-  cards.forEach(c => {
+  cards
+    // Temporary kill switch: drop the Leaderboard + Profile hub cards
+    // to match the removed nav links.
+    .filter(c => !(LEADERBOARD_AND_ACCOUNTS_OFF && (c.href === "leaderboard.html" || c.href === "profile.html")))
+    .forEach(c => {
     const card = document.createElement("article");
     card.className = "game-card";
     card.innerHTML = `
@@ -2319,7 +2338,7 @@ function renderGameStatsCard(mountId, gameId){
             </li>
           `).join("")}
         </ul>
-        <a class="sidecard__link" href="profile.html">All your stats &rarr;</a>
+        ${LEADERBOARD_AND_ACCOUNTS_OFF ? "" : `<a class="sidecard__link" href="profile.html">All your stats &rarr;</a>`}
       </article>
     `;
 
@@ -3371,4 +3390,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("year") && (document.getElementById("year").textContent = new Date().getFullYear());
   document.getElementById("siteVersion") && (document.getElementById("siteVersion").textContent = SITE_VERSION);
   initEditionLabel();
+
+  // Temporary kill switch: pull the Leaderboard + Profile links out of
+  // the nav on every page. The pages themselves still load and show a
+  // "check back soon" message for anyone with a direct link/bookmark.
+  if (LEADERBOARD_AND_ACCOUNTS_OFF) {
+    document.querySelectorAll(
+      '.dateline__nav a[href="leaderboard.html"], .dateline__nav a[href="profile.html"]'
+    ).forEach((a) => a.remove());
+  }
 });

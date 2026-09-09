@@ -376,19 +376,24 @@ A cross-origin iframe can't resize itself to fit its content, so `embed.js` (loa
 
 1. In WordPress, create a **Page** (not a post). A full-width page template looks best.
 2. Add one **Custom HTML block** and paste the snippet below.
-3. Replace `GAMES_URL` with the live site URL and `GAMES_ORIGIN` with just its scheme + domain (no path).
+3. The snippet is filled in for the current GitHub Pages host
+   (`https://cksarge.github.io/The-Roundup-Games/`). If the games site ever moves
+   to its own domain, update two things: the iframe `src` (the full URL to
+   `index.html`) and `GAMES_ORIGIN` (just the new scheme + domain, no path — this
+   is the `postMessage` security check, so it has to match exactly).
 4. Publish, then add the page to the site menu.
 
 ```html
 <iframe id="roundup-games"
-  src="GAMES_URL/index.html"
+  src="https://cksarge.github.io/The-Roundup-Games/index.html"
   title="The Roundup Games"
   style="width:100%;border:0;display:block"
   scrolling="no"
   allow="fullscreen"></iframe>
 <script>
 (function () {
-  var GAMES_ORIGIN = "GAMES_ORIGIN"; // e.g. https://cksarge.github.io
+  // scheme + domain only, no path — must match wherever the games site is hosted
+  var GAMES_ORIGIN = "https://cksarge.github.io";
   var frame = document.getElementById("roundup-games");
   frame.style.height = "1200px"; // fallback until the first height message
   window.addEventListener("message", function (e) {

@@ -474,7 +474,6 @@ const PERSISTENT_GAME_QUESTIONS = [
   { question: "What is the name of Brophy's all-girls sister school on an adjacent campus?", choices: ["Xavier College Preparatory", "St. Mary's High School", "Notre Dame Prep", "Our Lady of Sorrows"], correctIndex: 0 },
   { question: "Brophy's football rivalry with which school dates back to 1959?", choices: ["St. Mary's", "Xavier College Prep", "Central High School", "Corona del Sol"], correctIndex: 0 },
   { question: "What is the name of Brophy's student newspaper?", choices: ["The Bronco Beat", "The Roundup", "The Stampede Times", "The Wrangler Weekly"], correctIndex: 1 },
-  { question: "What is Brophy's yearbook called?", choices: ["The Tower", "The Bronco", "The Legacy", "The Stampede"], correctIndex: 0 },
   { question: "How tall is the bell tower atop Brophy's historic chapel?", choices: ["95 feet", "115 feet", "135 feet", "155 feet"], correctIndex: 2 },
   { question: "Brophy's campus architecture is built in which style?", choices: ["Gothic Revival", "Spanish Colonial", "Art Deco", "Modernist"], correctIndex: 1 },
   { question: "Brophy's system of dividing students into eight houses named after saints was inspired by the residential college system at which university?", choices: ["Harvard", "Yale", "Princeton", "Stanford"], correctIndex: 1 },

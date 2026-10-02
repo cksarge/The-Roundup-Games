@@ -486,6 +486,13 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 2.1.4 — October 2026
+
+- **About page wording.** The copyright paragraph is now bold, fixes its
+  grammar, and separates the two things it covers: the publications' content
+  (copyright Brophy College Preparatory, permission needed) and the website's
+  code (MIT License, linked). Dropped the redundant "student-run" from the intro.
+
 ### Version 2.1.3 — October 2026
 
 - **New home: <https://roundup.carterscoding.com/>.** Still GitHub Pages, now

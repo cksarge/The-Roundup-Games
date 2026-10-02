@@ -486,7 +486,7 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
-### Unreleased
+### Version 2.1.3 — October 2026
 
 - **New home: <https://roundup.carterscoding.com/>.** Still GitHub Pages, now
   behind a custom domain (`CNAME`). The WordPress/SNO embed snippet above points

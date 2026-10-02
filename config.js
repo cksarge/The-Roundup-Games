@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.1.2";
+const SITE_VERSION = "2.1.3";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -235,6 +235,20 @@ function isoWeekKey(input){
 
 const WEEKLY_PUZZLES = [
   {
+    isoDate: "2026-10-05",
+    date: "Week of October 5, 2026",
+    crossword: {
+      difficulty: "3/5",
+      theme: "The Admissions Process",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/crossword?id=roundupweekoct5&set=carter"
+    },
+    wordSearch: {
+      difficulty: "5/5",
+      theme: "Our Jesuit Identity",
+      embedUrl: "https://puzzleme.amuselabs.com/pmm/wordsearch?id=roundupsearchweekoct5&set=carter"
+    },
+  },
+  {
     isoDate: "2026-09-07",
     date: "Week of September 7, 2026",
     crossword: {
@@ -349,7 +363,7 @@ const WEEKLY_PUZZLES = [
 const SPECIAL_PUZZLES = [
   {
     startIsoDate: "2026-08-31",
-    endIsoDate: "2026-09-13",
+    endIsoDate: "2026-10-11",
     date: "First Week of Roundup Games",
     theme: "Welcome to The Roundup Games",
     difficulty: "3/5",

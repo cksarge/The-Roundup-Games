@@ -486,6 +486,18 @@ Notes:
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
 
+### Version 2.1.5 — October 2026
+
+- **`?ignoresort=true` now sticks as you click around.** While the preview
+  switch is on, every link to another page of the site gets `ignoresort=true`
+  added (`keepPreviewOnLink` in `config.js`), so it no longer has to be retyped
+  on each page. Links to other sites and the copied share / challenge URLs are
+  left alone, and a normal visit is untouched. To leave preview mode, delete it
+  from the address bar.
+- **About page tightened.** The intro, opinions, and credit paragraphs were
+  rewritten to be shorter and clearer (the two credit paragraphs are now one),
+  and the copyright paragraph's first two sentences were merged.
+
 ### Version 2.1.4 — October 2026
 
 - **About page wording.** The copyright paragraph is now bold, fixes its

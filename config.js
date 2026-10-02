@@ -97,7 +97,7 @@ const TODAY_DATE = new Date().toLocaleDateString("en-US", {
    -----------------------------------------------------------------
    Shown in the footer, e.g. "Version 1.3". Purely a label for your
    own tracking — change it to whatever you want, whenever you want. */
-const SITE_VERSION = "2.1.4";
+const SITE_VERSION = "2.1.5";
 
 /* BUG REPORT / CONTACT FORM
    -----------------------------------------------------------------
@@ -561,13 +561,35 @@ const PERSISTENT_GAME_QUESTIONS = [
    current one instead of staying hidden until its date arrives.
    It's a spot-check aid for whoever is scheduling puzzles — off by
    default, changes nothing about what a normal visitor sees, and
-   nothing on the site links to or mentions it. Streak/stat logic is
+   nothing on the site links to or mentions it (once it's on, it
+   carries itself from page to page — see keepPreviewOnLink). Streak/stat logic is
    deliberately NOT affected (see getPublishedEntries), so a preview
    visit can't credit a win for a puzzle that isn't really out yet —
    and leaderboard.js refuses EVERY Supabase score write while this is
    on (see lbScoreSavingBlocked), so a preview solve can't be posted
    either. */
 const PREVIEW_UNRELEASED = location.search.indexOf("ignoresort=true") !== -1;
+
+/* Keep preview mode "sticky": while it's on, every link to another
+   page of this site gets ignoresort=true added, so it doesn't have to
+   be retyped on each page. The link is patched the moment it's
+   pressed, focused, or clicked (not once at load), because most of
+   the site's links are rendered later by the functions below. Links
+   to other sites, "#" links, and the copied share / challenge URLs
+   are left alone. A normal visit never runs any of this. */
+function keepPreviewOnLink(e){
+  const a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+  if (!a) return;
+  const raw = a.getAttribute("href") || "";
+  if (raw.charAt(0) === "#" || a.origin !== location.origin) return;
+  if (a.search.indexOf("ignoresort=true") !== -1) return;
+  a.search = a.search + (a.search ? "&" : "?") + "ignoresort=true";
+}
+if (PREVIEW_UNRELEASED) {
+  ["pointerdown", "focusin", "click"].forEach(type => {
+    document.addEventListener(type, keepPreviewOnLink, true);
+  });
+}
 
 /* Today's date as "yyyy-mm-dd", built from local date parts (not
    UTC) so it lines up with how isoDate is written above. */

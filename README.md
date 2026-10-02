@@ -1,6 +1,6 @@
 # The Roundup Games
 
-Games and puzzles from **The Roundup**, the student-led newspaper of Brophy College Preparatory. Built as a lightweight static site — no build step, no dependencies — so new puzzles can be published just by editing one file.
+Games and puzzles from **The Roundup**, the student-led newspaper of Brophy College Preparatory. Live at **<https://roundup.carterscoding.com/>**. Built as a lightweight static site — no build step, no dependencies — so new puzzles can be published just by editing one file.
 
 Live features:
 
@@ -13,7 +13,7 @@ Live features:
 - **Bronco Blitz** — a persistent 30-second trivia speed round. Answer A/B/C/D questions for 100 points each, times a streak multiplier that grows the longer your correct-answer streak runs, plus a speed bonus for fast answers; a wrong answer breaks the streak and locks you out for 3 seconds while the clock keeps running
 - **Archive** — every past edition, auto-populated as new puzzles go live
 - **Leaderboard** (`leaderboard.html`) — a shared weekly leaderboard (Supabase): Bronco Blitz high score **and** all-rounds-added-up total; fastest time for the other Bronco games; fastest solve for the Print Edition Crossword; fastest solve + longest streak for the Weekly Crossword / Word Search / Special Edition. Each has a this-week and an all-time view. **Anyone can view it; posting a score needs an account.**
-- **Profile / accounts** (`profile.html`) — sign up with an email (recovery only), password, first name, last initial, and grad year, and your stats (win counts, streaks, fastest times, high scores, lifetime points) **save to the account and reload on any device you sign in on**. Points you racked up before signing up carry over. Your own stats live here now, not on the leaderboard page. See [Accounts (Supabase Auth)](#accounts-supabase-auth). Playing never requires an account — the only prompt is at the "post this score" moment.
+- **Profile / accounts** (`profile.html`) — sign up with an email (confirmed with a 6-digit emailed code; also used for password resets), password, first name, last initial, and grad year, and your stats (win counts, streaks, fastest times, high scores, lifetime points) **save to the account and reload on any device you sign in on**. Points you racked up before signing up carry over. Your own stats live here now, not on the leaderboard page. See [Accounts (Supabase Auth)](#accounts-supabase-auth). Playing never requires an account — the only prompt is at the "post this score" moment.
 - **Per-game cards** — under every game: a live "Your Stats" card that pops when a number goes up, and a "Share This Game" card with two links — *play the exact same set* (no score attached) and *challenge them* (with your score to beat)
 
 **Retired (v1.5):** Daily Crossword and Guess the Teacher are no longer published. Their pages, homepage cards, and nav links are gone, but every past edition stays playable at the bottom of the Archive.
@@ -51,12 +51,12 @@ bronco-splash.html        Bronco Splash (persistent swimming game)
 bronco-blitz.html         Bronco Blitz (persistent trivia speed round)
 archive.html              Past editions of every game
 leaderboard.html          The shared weekly leaderboard (view-only for everyone; posting a score needs an account)
-profile.html              Account: sign up / log in, edit your name, and see your own synced stats. Shows just the sign-up form until you have an account
+profile.html              Account: sign up / confirm email / log in / forgot password, edit your name, and see your own synced stats. Shows just the sign-up form until you have an account
 stats.html                Redirect stub → leaderboard.html (kept so old links/bookmarks don't 404)
 report-bug.html           "Bug Report / Contact" — embeds the Google Form used for bug reports and for contacting the editors (BUG_REPORT_FORM_URL in config.js)
 404.html                  Shown for any URL that doesn't match a real page
 config.js                 All puzzle content + shared rendering logic (per-game stats/share cards, puzzle solve-tracking + reveal-assist guard, the name blocklist, Supabase/Turnstile keys)
-auth.js                   Accounts client — builds the supabase-js client, handles sign-in/out, and merges + syncs stats to the signed-in account
+auth.js                   Accounts client — builds the supabase-js client, handles sign-in/out, the emailed confirm + password-reset codes, and merges + syncs stats to the signed-in account
 leaderboard.js            Weekly leaderboard client — reads via Supabase REST, writes via the auth.js client (needs an account). Blank the keys in config.js to switch it off
 blocked-words.csv/.sql    LDNOOBW profanity list (CSV import + ready-to-run INSERT) for the Supabase blocked_words table; also inlined in config.js
 embed.js                  Iframe auto-resize helper (only does anything when the site is framed)
@@ -137,26 +137,77 @@ box is gone). `auth.js` builds the client, `profile.html` is the sign-up / login
 ### 1. Auth settings (dashboard)
 
 - **Authentication → Providers → Email:** enabled.
-- **Confirm email: OFF.** The site sends **no email of any kind** — no
-  confirmation, no reset links — so no custom SMTP is needed. `signUp` returns a
-  session immediately and the player can post right away. The toggle is on the
-  **Email** provider row; if your dashboard hides it, use the Management API
-  (`PATCH /v1/projects/{ref}/config/auth` → `{"mailer_autoconfirm": true}`) or
-  `supabase/config.toml` → `[auth.email] enable_confirmations = false`.
-- **Email** is still a required sign-up field — it's how you identify someone for
-  a **manual password reset**. When a player writes in (the "Forgot password?"
-  link on `profile.html` goes to the Bug Report / Contact form), reset it from
-  **Authentication → Users** in the dashboard.
+- **Confirm email: ON.** A new account can't log in until the player enters the
+  **6-digit code** from the sign-up email. `signUp` returns no session;
+  `profile.html` switches to a "Confirm your email" screen and
+  `verifyEmailCode()` (`auth.js` → `verifyOtp`, type `email`) turns the code into
+  a session. Logging in to a still-unconfirmed account lands on that same screen.
+  Accounts made while confirmation was off are already confirmed and unaffected.
+- **Email OTP length: 6** and **Email OTP expiration: 3600 s** (same Email
+  provider panel). The code box on `profile.html` only takes 6 digits and the
+  email templates below say "one hour" — keep all three in step.
+- **Custom SMTP: required** (Authentication → Emails → SMTP Settings).
+  Supabase's built-in mailer only delivers to project team members and is capped
+  at a couple of emails an hour. With custom SMTP on, raise **Authentication →
+  Rate Limits → emails per hour** above the default 30 if a class signs up at
+  once.
+- **URL Configuration → Site URL:** `https://roundup.carterscoding.com`. (The
+  emails carry codes, not links, so nothing actually redirects — this just keeps
+  `{{ .SiteURL }}` right.)
+- **Forgot password** is self-serve: the link on the log-in form asks for the
+  email, `sendPasswordReset()` mails a 6-digit code, and the next screen takes
+  the code + a new password (`verifyResetCode()` → `setNewPassword()`). The
+  player ends up signed in. Supabase answers the same whether or not the email
+  has an account, so the screen never reveals which emails are registered.
+- **Resend code** (both screens) needs a fresh Turnstile token, so the check
+  pops up when the link is clicked and the email goes out as soon as it passes.
+  Supabase allows one email per address per 60 seconds.
+
+#### Email templates (Authentication → Emails → Templates)
+
+Both templates must print **`{{ .Token }}`** (the 6-digit code) and must **not**
+include `{{ .ConfirmationURL }}` — there's no link flow on the site, and mail
+scanners that pre-open links would burn the code.
+
+**Confirm signup** — subject: `{{ .Token }} is your Roundup Games code`
+
+```html
+<div style="font-family:Georgia,'Times New Roman',serif;max-width:480px;margin:0 auto;padding:24px;color:#2b2b2b">
+  <h2 style="margin:0 0 4px;color:#631320">The Roundup Games</h2>
+  <p style="margin:0 0 20px;font-size:13px;color:#777">Brophy College Preparatory</p>
+  <p>Thanks for signing up! Enter this code on the Profile page to confirm your email and finish creating your account:</p>
+  <p style="font-family:'Courier New',monospace;font-size:34px;font-weight:bold;letter-spacing:8px;text-align:center;background:#F3EDE0;border:1px solid #e2d9c5;border-radius:6px;padding:16px 0;margin:24px 0;color:#631320">{{ .Token }}</p>
+  <p>The code expires in one hour. If it runs out, log in and tap &ldquo;Resend code.&rdquo;</p>
+  <p style="font-size:13px;color:#777;border-top:1px solid #e2d9c5;padding-top:14px;margin-top:24px">Didn&rsquo;t sign up for The Roundup Games? You can ignore this email &mdash; no account is active without the code.</p>
+</div>
+```
+
+**Reset password** — subject: `{{ .Token }} is your Roundup Games password reset code`
+
+```html
+<div style="font-family:Georgia,'Times New Roman',serif;max-width:480px;margin:0 auto;padding:24px;color:#2b2b2b">
+  <h2 style="margin:0 0 4px;color:#631320">The Roundup Games</h2>
+  <p style="margin:0 0 20px;font-size:13px;color:#777">Brophy College Preparatory</p>
+  <p>Someone asked to reset the password for your Roundup Games account. Enter this code on the Profile page, along with your new password:</p>
+  <p style="font-family:'Courier New',monospace;font-size:34px;font-weight:bold;letter-spacing:8px;text-align:center;background:#F3EDE0;border:1px solid #e2d9c5;border-radius:6px;padding:16px 0;margin:24px 0;color:#631320">{{ .Token }}</p>
+  <p>The code expires in one hour and only the newest code works.</p>
+  <p style="font-size:13px;color:#777;border-top:1px solid #e2d9c5;padding-top:14px;margin-top:24px">Didn&rsquo;t ask for this? Ignore this email and your password stays the same. Never share this code with anyone.</p>
+</div>
+```
+
+The other templates (Magic Link, Invite, Change Email, Reauthentication) aren't
+used by the site.
 
 ### 2. Cloudflare Turnstile (bot check on signup + login)
 
-1. Cloudflare dashboard → **Turnstile** → add a widget for the site's domain (add
+1. Cloudflare dashboard → **Turnstile** → add a widget for the site's domain
+   (`roundup.carterscoding.com`; add
    the SNO/WordPress domain too if signup should work inside the embed). Note the
    **site key** (public) and **secret key** (private).
 2. Supabase → **Authentication → Attack Protection → Enable CAPTCHA protection**,
    provider **Turnstile**, paste the **secret key**. Supabase now rejects any
-   signup or login call without a valid token, so the client sends one from both
-   forms.
+   signup, login, password-reset, or resend-code call without a valid token, so
+   the client sends one with each. (Entering an emailed code needs no token.)
 3. Put the **site key** in `config.js` as `TURNSTILE_SITEKEY`.
 
 Blank `TURNSTILE_SITEKEY` **and** turn the Supabase CAPTCHA setting off to disable
@@ -390,16 +441,17 @@ A cross-origin iframe can't resize itself to fit its content, so `embed.js` (loa
 
 1. In WordPress, create a **Page** (not a post). A full-width page template looks best.
 2. Add one **Custom HTML block** and paste the snippet below.
-3. The snippet is filled in for the current GitHub Pages host
-   (`https://cksarge.github.io/The-Roundup-Games/`). If the games site ever moves
-   to its own domain, update two things: the iframe `src` (the full URL to
+3. The snippet is filled in for the site's current home
+   (`https://roundup.carterscoding.com/` — GitHub Pages behind a custom domain;
+   the repo's `CNAME` file holds it). If the games site ever moves again, update
+   two things: the iframe `src` (the full URL to
    `index.html`) and `GAMES_ORIGIN` (just the new scheme + domain, no path — this
    is the `postMessage` security check, so it has to match exactly).
 4. Publish, then add the page to the site menu.
 
 ```html
 <iframe id="roundup-games"
-  src="https://cksarge.github.io/The-Roundup-Games/index.html"
+  src="https://roundup.carterscoding.com/index.html"
   title="The Roundup Games"
   style="width:100%;border:0;display:block"
   scrolling="no"
@@ -407,7 +459,7 @@ A cross-origin iframe can't resize itself to fit its content, so `embed.js` (loa
 <script>
 (function () {
   // scheme + domain only, no path — must match wherever the games site is hosted
-  var GAMES_ORIGIN = "https://cksarge.github.io";
+  var GAMES_ORIGIN = "https://roundup.carterscoding.com";
   var frame = document.getElementById("roundup-games");
   frame.style.height = "1200px"; // fallback until the first height message
   window.addEventListener("message", function (e) {
@@ -433,6 +485,25 @@ Notes:
 ## Version history
 
 Newest at the top. Add an entry here whenever a change is significant enough to be worth noting (new game, notable feature, structural change, etc.) — small content updates (just adding a day's puzzle) don't need an entry.
+
+### Unreleased
+
+- **New home: <https://roundup.carterscoding.com/>.** Still GitHub Pages, now
+  behind a custom domain (`CNAME`). The WordPress/SNO embed snippet above points
+  at the new URL and origin — **re-paste it on the SNO page**, or the old
+  `GAMES_ORIGIN` check will ignore the height messages. Stats saved in a browser
+  under the old `cksarge.github.io` address don't carry over on their own
+  (`localStorage` is per-domain); stats synced to an account do.
+- **Email confirmation is back, as a 6-digit code.** With custom SMTP set up,
+  "Confirm email" is on again: after signing up, `profile.html` shows a "Confirm
+  your email" screen and the account can't log in until the emailed code is
+  entered (with a **Resend code** link). Codes instead of links, so the whole
+  thing stays on the page and works inside the SNO iframe.
+- **Self-serve "Forgot password?"** — replaces the old link to the Bug Report
+  form. Email → 6-digit code → new password, all on `profile.html`.
+- `auth.js` gains `verifyEmailCode`, `resendEmailCode`, `sendPasswordReset`,
+  `verifyResetCode`, `setNewPassword`. Supabase settings + the two email
+  templates are in **Accounts → 1. Auth settings**.
 
 ### Version 2.1.2 — September 2026
 

@@ -2217,7 +2217,7 @@ function flashCopied(btn){
 
 /* This page's own URL with any existing query/hash stripped — the
    base a challenge link is built on, so links keep working wherever
-   the site is hosted (github.io directly, or framed on the SNO site). */
+   the site is hosted (roundup.carterscoding.com directly, or framed on the SNO site). */
 function gameBaseUrl(){
   return location.origin + location.pathname;
 }

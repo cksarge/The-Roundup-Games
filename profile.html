@@ -89,7 +89,10 @@
   "use strict";
   var GRAD_YEARS = ["27", "28", "29", "30", "31", "32", "33"];
   var mount = document.getElementById("profileMount");
-  var mode = "signup";          // "signup" | "login"
+  var mode = "signup";          // "signup" | "login" | "verify" | "forgot" | "reset"
+  var pendingEmail = "";        // who the emailed code went to (verify / reset)
+  var resetVerified = false;    // reset code already accepted, only the password is left
+  var notice = "";              // one-shot line for the next render
   var editing = false;
   var busy = false;
   var widgetId = null;          // current Turnstile widget
@@ -122,6 +125,33 @@
   function captchaReset() {
     if (widgetId != null && window.turnstile) { try { window.turnstile.reset(widgetId); } catch (e) {} }
   }
+  // Resending needs its own fresh Turnstile token (they're single-use),
+  // so that check only appears once "Resend code" is clicked, and the
+  // send fires as soon as it passes.
+  var resendWidgetId = null;
+  function withCaptcha(fn) {
+    if (!(typeof turnstileEnabled === "function" && turnstileEnabled())) { fn(""); return; }
+    var slot = mount.querySelector('[data-role="resendCaptcha"]');
+    if (!captchaOn() || !slot || !window.turnstile) {
+      setErr("The “I’m human” check is still loading — try again in a moment."); return;
+    }
+    if (resendWidgetId != null) { try { window.turnstile.remove(resendWidgetId); } catch (e) {} }
+    slot.innerHTML = "<div></div>";
+    try {
+      resendWidgetId = window.turnstile.render(slot.firstChild, {
+        sitekey: TURNSTILE_SITEKEY,
+        callback: function (token) {
+          try { window.turnstile.remove(resendWidgetId); } catch (e) {}
+          resendWidgetId = null; slot.innerHTML = "";
+          fn(token);
+        }
+      });
+    } catch (e) { resendWidgetId = null; setErr("The “I’m human” check didn’t load — refresh and try again."); }
+  }
+  function codeInput() {
+    return '<label>6-digit code<input type="text" name="code" inputmode="numeric" pattern="[0-9]*" ' +
+      'autocomplete="one-time-code" minlength="6" maxlength="6" required></label>';
+  }
   function setErr(msg) {
     var el = mount.querySelector('[data-role="err"]');
     if (el) { el.textContent = msg || ""; el.hidden = !msg; }
@@ -139,6 +169,9 @@
     var user = (typeof currentUser === "function") ? currentUser() : null;
     var profile = (typeof currentProfile === "function") ? currentProfile() : null;
 
+    // A good reset code signs the player in before the new password is
+    // saved, so this screen has to win over the signed-in view.
+    if (mode === "reset") { renderAuth(); return; }
     if (user && profile) { renderLoggedIn(profile); return; }
     if (user && !profile) {
       mount.innerHTML =
@@ -163,11 +196,61 @@
     var captchaHtml = (typeof turnstileEnabled === "function" && turnstileEnabled())
       ? '<div class="cf-turnstile" data-sitekey="' + esc(TURNSTILE_SITEKEY) + '"></div>' : "";
 
-    if (mode === "signup") {
+    if (mode === "verify") {
+      mount.innerHTML =
+        '<div class="lb-panel">' +
+          '<h2 class="section-head" style="margin-top:0">Confirm your email</h2>' +
+          '<p class="lb-identity__lead">We emailed a 6-digit code to <strong>' + esc(pendingEmail) + '</strong>. Enter it here to finish setting up your account. It can take a minute — check spam too.</p>' +
+          '<form class="lb-identity" data-role="verifyForm" autocomplete="off">' +
+            '<div class="lb-identity__fields">' + codeInput() + '</div>' +
+            '<button class="btn" type="submit">Confirm</button>' +
+            '<div data-role="resendCaptcha"></div>' +
+            '<p class="sidecard__hint" data-role="err" hidden></p>' +
+          '</form>' +
+          '<p class="lb-identity__lead">' +
+            'Didn’t get it? <a href="#" data-role="resend">Resend code</a> &nbsp;&middot;&nbsp; ' +
+            '<a href="#" data-role="toLogin">Back to log in</a>' +
+          '</p>' +
+        '</div>';
+    } else if (mode === "forgot") {
+      mount.innerHTML =
+        '<div class="lb-panel">' +
+          '<h2 class="section-head" style="margin-top:0">Forgot password</h2>' +
+          '<p class="lb-identity__lead">Enter your account’s email and we’ll send a 6-digit code to reset your password.</p>' +
+          '<form class="lb-identity" data-role="forgotForm" autocomplete="off">' +
+            '<div class="lb-identity__fields">' +
+              '<label>Email<input type="email" name="email" value="' + esc(pendingEmail) + '" required></label>' +
+            '</div>' +
+            captchaHtml +
+            '<button class="btn" type="submit">Send code</button>' +
+            '<p class="sidecard__hint" data-role="err" hidden></p>' +
+          '</form>' +
+          '<p class="lb-identity__lead"><a href="#" data-role="toLogin">Back to log in</a></p>' +
+        '</div>';
+    } else if (mode === "reset") {
+      mount.innerHTML =
+        '<div class="lb-panel">' +
+          '<h2 class="section-head" style="margin-top:0">Reset password</h2>' +
+          '<p class="lb-identity__lead">If <strong>' + esc(pendingEmail) + '</strong> has an account, we just emailed it a 6-digit code. Enter it with your new password. It can take a minute — check spam too.</p>' +
+          '<form class="lb-identity" data-role="resetForm" autocomplete="off">' +
+            '<div class="lb-identity__fields">' +
+              codeInput() +
+              '<label>New password<input type="password" name="password" minlength="6" autocomplete="new-password" required></label>' +
+            '</div>' +
+            '<button class="btn" type="submit">Set new password</button>' +
+            '<div data-role="resendCaptcha"></div>' +
+            '<p class="sidecard__hint" data-role="err" hidden></p>' +
+          '</form>' +
+          '<p class="lb-identity__lead">' +
+            'Didn’t get it? <a href="#" data-role="resend">Resend code</a> &nbsp;&middot;&nbsp; ' +
+            '<a href="#" data-role="cancelReset">Cancel</a>' +
+          '</p>' +
+        '</div>';
+    } else if (mode === "signup") {
       mount.innerHTML =
         '<div class="lb-panel">' +
           '<h2 class="section-head" style="margin-top:0">Create an account</h2>' +
-          '<p class="lb-identity__lead">Your name shows on the leaderboard as first name + last initial + grad year. Email is only used so we can help you recover your account.</p>' +
+          '<p class="lb-identity__lead">Your name shows on the leaderboard as first name + last initial + grad year. Email is only used to confirm your account and reset your password.</p>' +
           '<form class="lb-identity" data-role="form" autocomplete="off">' +
             '<div class="lb-identity__fields">' +
               '<label>Email<input type="email" name="email" required></label>' +
@@ -198,18 +281,39 @@
             '<p class="sidecard__hint" data-role="err" hidden></p>' +
           '</form>' +
           '<p class="lb-identity__lead">' +
-            '<a href="report-bug.html">Forgot password?</a> &nbsp;&middot;&nbsp; ' +
+            '<a href="#" data-role="toForgot">Forgot password?</a> &nbsp;&middot;&nbsp; ' +
             'Need an account? <a href="#" data-role="toSignup">Create one</a>' +
           '</p>' +
         '</div>';
     }
 
-    mount.querySelector('[data-role="form"]').addEventListener("submit", onAuthSubmit);
+    var form = mount.querySelector('[data-role="form"]');
+    if (form) form.addEventListener("submit", onAuthSubmit);
+    var verifyForm = mount.querySelector('[data-role="verifyForm"]');
+    if (verifyForm) verifyForm.addEventListener("submit", onVerifySubmit);
+    var forgotForm = mount.querySelector('[data-role="forgotForm"]');
+    if (forgotForm) forgotForm.addEventListener("submit", onForgotSubmit);
+    var resetForm = mount.querySelector('[data-role="resetForm"]');
+    if (resetForm) resetForm.addEventListener("submit", onResetSubmit);
+    var resend = mount.querySelector('[data-role="resend"]');
+    if (resend) resend.addEventListener("click", onResend);
+    var toForgot = mount.querySelector('[data-role="toForgot"]');
+    if (toForgot) toForgot.addEventListener("click", function (e) {
+      e.preventDefault();
+      var em = mount.querySelector('input[name="email"]');
+      pendingEmail = em ? (em.value || "").trim() : "";
+      mode = "forgot"; renderProfile();
+    });
+    var cancelReset = mount.querySelector('[data-role="cancelReset"]');
+    if (cancelReset) cancelReset.addEventListener("click", function (e) {
+      e.preventDefault(); resetVerified = false; mode = "login"; renderProfile();
+    });
     var toLogin = mount.querySelector('[data-role="toLogin"]');
     var toSignup = mount.querySelector('[data-role="toSignup"]');
     if (toLogin) toLogin.addEventListener("click", function (e) { e.preventDefault(); mode = "login"; renderProfile(); });
     if (toSignup) toSignup.addEventListener("click", function (e) { e.preventDefault(); mode = "signup"; renderProfile(); });
     mountCaptcha();
+    if (notice) { setErr(notice); notice = ""; }
   }
 
   // Turn a Supabase auth error into something a student can act on.
@@ -225,6 +329,12 @@
       return "That email already has an account. Try logging in instead.";
     if (code === "invalid_credentials" || msg.indexOf("invalid login") !== -1)
       return "Email or password doesn’t match. Check both and try again.";
+    if (code === "email_not_confirmed" || msg.indexOf("email not confirmed") !== -1)
+      return "Confirm your email first — enter the 6-digit code we emailed you.";
+    if (code === "otp_expired" || msg.indexOf("expired") !== -1 || msg.indexOf("invalid token") !== -1)
+      return "That code is wrong or has expired — check it, or tap Resend code for a new one.";
+    if (code === "same_password" || msg.indexOf("different from the old") !== -1)
+      return "That’s already your password — pick a new one.";
     if (code.indexOf("rate") !== -1 || msg.indexOf("rate limit") !== -1 || msg.indexOf("security purposes") !== -1)
       return "Too many tries just now — wait a minute and try again.";
     if (msg.indexOf("captcha") !== -1)
@@ -262,11 +372,16 @@
         busy = false;
         if (res.error) { captchaReset(); setErr(authErrText(res.error, "Could not create the account.")); return; }
         if (res.data && !res.data.session) {
-          // No session back (e.g. "Confirm email" is on in Supabase).
-          // Just send them to the log-in form.
-          mode = "login";
+          // "Confirm email" is on in Supabase: no session until the
+          // emailed code is entered. An email that's already confirmed
+          // comes back as a decoy user with no identities (and no email
+          // is sent), so say so instead of waiting on a code.
+          var ids = res.data.user && res.data.user.identities;
+          if (Array.isArray(ids) && !ids.length) {
+            captchaReset(); setErr("That email already has an account. Try logging in instead."); return;
+          }
+          pendingEmail = email; mode = "verify";
           renderAuth();
-          setErr("Account created — log in below.");
           return;
         }
         // signed in — onAuthStateChange -> renderProfile()
@@ -278,10 +393,99 @@
       setErr(""); busy = true;
       signIn({ email: email, password: password, captchaToken: captchaToken() }).then(function (res) {
         busy = false;
-        if (res.error) { captchaReset(); setErr(authErrText(res.error, "Could not log in.")); return; }
+        if (res.error) {
+          var c = (res.error.code || "").toLowerCase(), m = (res.error.message || "").toLowerCase();
+          if (c === "email_not_confirmed" || m.indexOf("email not confirmed") !== -1) {
+            // Signed up but never entered the code — pick up where they left off.
+            pendingEmail = email; mode = "verify";
+            notice = "Confirm your email first — enter the code from your sign-up email, or tap Resend code for a new one.";
+            renderAuth();
+            return;
+          }
+          captchaReset(); setErr(authErrText(res.error, "Could not log in.")); return;
+        }
         // signed in — onAuthStateChange -> renderProfile()
       });
     }
+  }
+
+  function readCode(f) { return (f.namedItem("code").value || "").replace(/[^0-9]/g, ""); }
+
+  function onVerifySubmit(e) {
+    e.preventDefault();
+    if (busy) return;
+    var code = readCode(e.target.elements);
+    if (code.length !== 6) { setErr("Enter the 6-digit code from the email."); return; }
+    setErr(""); busy = true;
+    verifyEmailCode({ email: pendingEmail, code: code }).then(function (res) {
+      busy = false;
+      if (res.error) { setErr(authErrText(res.error, "Could not confirm that code.")); return; }
+      mode = "login";
+      // signed in — onAuthStateChange -> renderProfile()
+    });
+  }
+
+  function onForgotSubmit(e) {
+    e.preventDefault();
+    if (busy) return;
+    var email = (e.target.elements.namedItem("email").value || "").trim();
+    if ((typeof turnstileEnabled === "function" && turnstileEnabled()) && !captchaToken()) {
+      setErr("Please complete the “I’m human” check."); return;
+    }
+    setErr(""); busy = true;
+    sendPasswordReset({ email: email, captchaToken: captchaToken() }).then(function (res) {
+      busy = false;
+      if (res.error) { captchaReset(); setErr(authErrText(res.error, "Could not send the code.")); return; }
+      pendingEmail = email; resetVerified = false; mode = "reset";
+      renderAuth();
+    });
+  }
+
+  function onResetSubmit(e) {
+    e.preventDefault();
+    if (busy) return;
+    var f = e.target.elements;
+    var code = readCode(f);
+    var password = f.namedItem("password").value || "";
+    if (!resetVerified && code.length !== 6) { setErr("Enter the 6-digit code from the email."); return; }
+    if (password.length < 6) { setErr("Password must be at least 6 characters."); return; }
+    setErr(""); busy = true;
+    // The code is single-use: once it's accepted, a rejected password
+    // (too weak, same as before) only retries the password step.
+    var verified = resetVerified
+      ? Promise.resolve({})
+      : verifyResetCode({ email: pendingEmail, code: code });
+    verified.then(function (res) {
+      if (res.error) { busy = false; setErr(authErrText(res.error, "Could not confirm that code.")); return; }
+      resetVerified = true;
+      return setNewPassword(password).then(function (res2) {
+        busy = false;
+        if (res2.error) { setErr(authErrText(res2.error, "Could not save the new password.")); return; }
+        resetVerified = false; mode = "login";
+        notice = "Password updated — you’re signed in.";
+        if (typeof currentProfile === "function" && currentProfile()) { renderProfile(); return; }
+        // profile still loading — the authchange listener paints it; this is the fallback
+        setErr("Password updated — signing you in…");
+        setTimeout(renderProfile, 2000);
+      });
+    });
+  }
+
+  function onResend(e) {
+    e.preventDefault();
+    if (busy) return;
+    if (mode === "reset" && resetVerified) { setErr("That code already worked — just set your new password."); return; }
+    var send = (mode === "reset") ? sendPasswordReset : resendEmailCode;
+    setErr("");
+    withCaptcha(function (token) {
+      busy = true;
+      send({ email: pendingEmail, captchaToken: token }).then(function (res) {
+        busy = false;
+        setErr(res.error
+          ? authErrText(res.error, "Could not send a new code.")
+          : "New code sent — check your inbox (and spam). Only the newest code works.");
+      });
+    });
   }
 
   function renderLoggedIn(profile) {
@@ -317,12 +521,14 @@
           '</div>' +
         '</div>' +
         editForm +
+        (notice ? '<p class="sidecard__hint">' + esc(notice) + '</p>' : '') +
         '<p class="lb-identity__lead">Your stats below sync to this account — log in on another device to pick up where you left off.</p>' +
       '</div>' +
       '<h2 class="section-head section-head--spaced">Your Stats</h2>' +
       '<div class="stats-grid" id="statsList"></div>' +
       '<p class="stats-note">Synced to your account. They also stay in this browser, so clearing site data here won’t lose them.</p>';
 
+    notice = "";
     if (typeof renderStatsPage === "function") renderStatsPage();
 
     var editBtn = mount.querySelector('[data-role="edit"]');
@@ -356,7 +562,11 @@
   }
 
   window.renderProfile = renderProfile;
-  document.addEventListener("roundup:authchange", function () { editing = false; renderProfile(); });
+  document.addEventListener("roundup:authchange", function () {
+    // mid-reset the code has just signed them in — don't wipe the form
+    if (mode === "reset") return;
+    editing = false; renderProfile();
+  });
   document.addEventListener("roundup:statschange", function () {
     if (document.getElementById("statsList") && typeof renderStatsPage === "function") renderStatsPage();
   });

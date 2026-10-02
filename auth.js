@@ -13,6 +13,13 @@
                             (the shape config.js / leaderboard.js expect)
      signUpAccount(...)  — create an account (+ Turnstile token)
      signIn(...)         — email + password (+ Turnstile token)
+     verifyEmailCode(...)    — confirm a new account with the 6-digit
+                                code from the sign-up email (signs in)
+     resendEmailCode(...)    — send that code again (+ Turnstile token)
+     sendPasswordReset(...)  — email a 6-digit password-reset code
+                                (+ Turnstile token)
+     verifyResetCode(...)    — check that reset code (signs in)
+     setNewPassword(...)     — set the signed-in account's password
      signOutAccount()    — sign out (keeps local stats untouched)
      updateProfile(...)  — edit first name / last initial / grad year
 
@@ -61,6 +68,8 @@
     // Still resolve so callers that `await authReady` don't hang.
     _resolveReady();
     window.signUpAccount = window.signIn = window.signOutAccount =
+      window.verifyEmailCode = window.resendEmailCode =
+      window.sendPasswordReset = window.verifyResetCode = window.setNewPassword =
       window.updateProfile = () => Promise.resolve({ error: { message: "Accounts are not set up." } });
     return;
   }
@@ -308,6 +317,61 @@
       password: opts.password || "",
       options: options
     });
+    return { data, error };
+  };
+
+  /* ---------- email codes (confirm sign-up / reset password) ----------
+     Both emails carry a 6-digit code ({{ .Token }} in the Supabase
+     templates), not a link, so the whole flow stays on profile.html —
+     nothing to redirect, and it works inside the SNO iframe too. */
+  function cleanCode(code) { return String(code || "").replace(/[^0-9]/g, ""); }
+
+  // "Confirm email" is ON in Supabase: signUp() returns no session, and
+  // this is what turns the emailed code into one.
+  window.verifyEmailCode = async function (opts) {
+    opts = opts || {};
+    const { data, error } = await sb.auth.verifyOtp({
+      email: (opts.email || "").trim(),
+      token: cleanCode(opts.code),
+      type: "email"
+    });
+    return { data, error };
+  };
+
+  window.resendEmailCode = async function (opts) {
+    opts = opts || {};
+    const options = {};
+    if (opts.captchaToken) options.captchaToken = opts.captchaToken;
+    const { data, error } = await sb.auth.resend({
+      type: "signup",
+      email: (opts.email || "").trim(),
+      options: options
+    });
+    return { data, error };
+  };
+
+  window.sendPasswordReset = async function (opts) {
+    opts = opts || {};
+    const options = {};
+    if (opts.captchaToken) options.captchaToken = opts.captchaToken;
+    const { data, error } = await sb.auth.resetPasswordForEmail((opts.email || "").trim(), options);
+    return { data, error };
+  };
+
+  // A good reset code signs the player in; setNewPassword() then
+  // changes the password on that fresh session.
+  window.verifyResetCode = async function (opts) {
+    opts = opts || {};
+    const { data, error } = await sb.auth.verifyOtp({
+      email: (opts.email || "").trim(),
+      token: cleanCode(opts.code),
+      type: "recovery"
+    });
+    return { data, error };
+  };
+
+  window.setNewPassword = async function (password) {
+    const { data, error } = await sb.auth.updateUser({ password: password || "" });
     return { data, error };
   };
 
